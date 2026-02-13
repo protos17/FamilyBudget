@@ -313,6 +313,10 @@ final class SharingManager {
         let record = makeItemRecord(for: item, listID: list.id, zoneID: zoneID)
 
         _ = try await database.save(record)
+        // Mark the item as confirmed in CloudKit so missing-remote checks
+        // can distinguish "deleted remotely" from "not uploaded yet".
+        item.modifiedAt = Date()
+        try? item.modelContext?.save()
         logger.info("Pushed item '\(item.text)' to CloudKit")
     }
 
@@ -344,13 +348,18 @@ final class SharingManager {
         let records = items.map { makeItemRecord(for: $0, listID: list.id, zoneID: zoneID) }
 
         try await saveRecords(records, to: database)
+        let syncedAt = Date()
+        for item in items {
+            item.modifiedAt = syncedAt
+        }
+        try? list.modelContext?.save()
         logger.info("Pushed \(records.count) items to CloudKit for list '\(list.name)'")
     }
 
     /// Fetches items from CloudKit and merges with local SwiftData.
     /// - Adds remote items that don't exist locally
-    /// - Removes local items created by OTHER users that no longer exist remotely
-    /// - Pushes local items created by the current user that aren't in CloudKit yet
+    /// - Removes locally cached items that were previously synced but no longer exist remotely
+    /// - Pushes local items that have never been confirmed in CloudKit yet
     func syncItems(for list: ItemList, context: ModelContext) async throws {
         guard list.isShared else { return }
         await UserIdentityService.shared.ensureIdentityResolved()
@@ -379,8 +388,6 @@ final class SharingManager {
 
         let localItems = list.items ?? []
         let localItemIDs = Set(localItems.map { $0.id })
-        let currentUserID = UserIdentityService.shared.currentUserID
-
         // 1. Add remote items that don't exist locally
         for (uuid, record) in remoteItems where !localItemIDs.contains(uuid) {
             let item = ListItem(
@@ -391,25 +398,42 @@ final class SharingManager {
             if let createdAt = record["createdAt"] as? Date {
                 item.createdAt = createdAt
             }
+            // Presence in remote means this item is already synced.
+            item.modifiedAt = Date()
             item.list = list
             context.insert(item)
             logger.debug("Synced remote item '\(item.text)' to local")
         }
 
-        // 2. Remove local items from OTHER users that were deleted remotely
+        // Mark local items that we can see remotely as synced.
+        for item in localItems where remoteItems.keys.contains(item.id) && item.modifiedAt == nil {
+            item.modifiedAt = Date()
+        }
+
+        // 2. Remove local items that were synced before, but no longer exist remotely.
+        // This prevents resurrecting items intentionally deleted by another participant.
         for item in localItems {
-            let isMyItem = item.createdByUserID == currentUserID || item.createdByUserID == nil
-            if !isMyItem && !remoteItems.keys.contains(item.id) {
+            let missingRemotely = !remoteItems.keys.contains(item.id)
+            let wasPreviouslySynced = item.modifiedAt != nil
+            if missingRemotely && wasPreviouslySynced {
                 context.delete(item)
-                logger.debug("Removed locally synced item '\(item.text)' (deleted remotely)")
+                logger.debug("Removed item '\(item.text)' (deleted remotely)")
             }
         }
 
-        // 3. Push local items that aren't in CloudKit yet
-        let itemsToPush = localItems.filter { !remoteItems.keys.contains($0.id) }
+        // 3. Push only items that haven't been confirmed in CloudKit yet.
+        // Items that are missing remotely but were previously synced are treated
+        // as remote deletions and are not re-uploaded.
+        let itemsToPush = localItems.filter {
+            !remoteItems.keys.contains($0.id) && $0.modifiedAt == nil
+        }
         if !itemsToPush.isEmpty {
             let records = itemsToPush.map { makeItemRecord(for: $0, listID: list.id, zoneID: zoneID) }
             try await saveRecords(records, to: database)
+            let syncedAt = Date()
+            for item in itemsToPush {
+                item.modifiedAt = syncedAt
+            }
             logger.info("Pushed \(records.count) local items to CloudKit")
         }
 

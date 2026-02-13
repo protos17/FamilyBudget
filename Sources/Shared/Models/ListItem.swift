@@ -14,6 +14,8 @@ final class ListItem {
     var id: UUID = UUID()
     var text: String = ""
     var createdAt: Date = Date()
+    /// Last time this item was confirmed in CloudKit.
+    /// Used by sync logic to avoid re-uploading items that were deleted remotely.
     var modifiedAt: Date?
 
     /// CloudKit user record name of the person who created this item.

@@ -14,6 +14,7 @@ struct ListsView: View {
     @State private var showingAddList = false
     @State private var newListName = ""
     @State private var sharingEndedName: String?
+    private let sharingHealthTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
         NavigationStack {
@@ -61,6 +62,14 @@ struct ListsView: View {
                     sharingEndedName = name
                 }
             }
+            .task {
+                await checkForEndedSharing()
+            }
+            .onReceive(sharingHealthTimer) { _ in
+                Task {
+                    await checkForEndedSharing()
+                }
+            }
             .alert("Sharing Ended", isPresented: .init(
                 get: { sharingEndedName != nil },
                 set: { if !$0 { sharingEndedName = nil } }
@@ -98,6 +107,12 @@ struct ListsView: View {
         modelContext.insert(list)
         try? modelContext.save()
         newListName = ""
+    }
+
+    private func checkForEndedSharing() async {
+        let sharedLists = lists.filter(\.isShared)
+        guard !sharedLists.isEmpty else { return }
+        await SharingManager.shared.checkForEndedSharing(in: sharedLists, context: modelContext)
     }
 }
 
