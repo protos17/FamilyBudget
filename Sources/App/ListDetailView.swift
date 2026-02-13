@@ -9,10 +9,12 @@
 import SwiftUI
 import SwiftData
 import CloudKit
+import Combine
 
 struct ListDetailView: View {
     let list: ItemList
     @Environment(\.modelContext) private var modelContext
+    @Query private var items: [ListItem]
     @State private var newItemText = ""
     @FocusState private var isInputFocused: Bool
 
@@ -23,8 +25,19 @@ struct ListDetailView: View {
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var showingLeaveConfirmation = false
+    @State private var isSyncing = false
 
     private var permissions: PermissionManager { .shared }
+
+    init(list: ItemList) {
+        self.list = list
+        let listID = list.id
+        _items = Query(
+            filter: #Predicate<ListItem> { $0.list?.id == listID },
+            sort: \.createdAt,
+            order: .reverse
+        )
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,7 +48,7 @@ struct ListDetailView: View {
                         sharingBanner
                     }
 
-                    ForEach(list.sortedItems) { item in
+                    ForEach(items) { item in
                         ItemCard(
                             item: item,
                             list: list,
@@ -49,7 +62,7 @@ struct ListDetailView: View {
             }
             .background(Color(.systemGroupedBackground))
             .overlay {
-                if list.sortedItems.isEmpty {
+                if items.isEmpty {
                     ContentUnavailableView(
                         "No Items",
                         systemImage: "checklist",
@@ -86,6 +99,30 @@ struct ListDetailView: View {
         } message: {
             Text(errorMessage)
         }
+        .task {
+            await syncSharedItems()
+        }
+        .refreshable {
+            await syncSharedItems()
+        }
+        // Periodic background sync every 5 seconds for shared lists.
+        // Push notifications are unreliable on dev devices — this is the
+        // primary mechanism for real-time sync (same pattern as ToMe).
+        .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in
+            guard list.isShared else { return }
+            Task { await syncSharedItems() }
+        }
+        // Bridge: when CloudKit pushes remote changes, DataManager reposts as
+        // .modelContextDidSave — re-sync so @Query picks up new items.
+        .onReceive(NotificationCenter.default.publisher(for: .modelContextDidSave)) { _ in
+            guard list.isShared else { return }
+            Task { await syncSharedItems() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: SharingManager.itemsDidSyncNotification)) { _ in
+            // Data was already synced in the push handler's context.
+            // Re-sync with the view's own context so @Query picks up changes.
+            Task { await syncSharedItems() }
+        }
         .confirmationDialog(
             "Leave \"\(list.name)\"?",
             isPresented: $showingLeaveConfirmation,
@@ -111,22 +148,23 @@ struct ListDetailView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Spacer()
+            if isSyncing {
+                ProgressView()
+                    .controlSize(.small)
+            }
         }
         .padding(12)
         .background(Color(.systemBlue).opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 
     private var bannerText: String {
-        if UserIdentityService.shared.isCurrentUserOwner(of: list) {
-            return "You're sharing this list"
-        } else {
-            return "Shared with you"
-        }
+        UserIdentityService.shared.isCurrentUserOwner(of: list)
+            ? "You're sharing this list"
+            : "Shared with you"
     }
 
     // MARK: - Share Button
 
-    @ViewBuilder
     private var shareButton: some View {
         Menu {
             if permissions.canShareList(list) || list.isShared {
@@ -159,7 +197,7 @@ struct ListDetailView: View {
             return
         }
 
-        Task { @MainActor in
+        Task {
             do {
                 let (share, container) = try await SharingManager.shared.fetchOrCreateShare(
                     for: list, context: modelContext
@@ -215,11 +253,37 @@ struct ListDetailView: View {
         modelContext.insert(item)
         try? modelContext.save()
         newItemText = ""
+
+        // Push to CloudKit if shared
+        if list.isShared {
+            Task {
+                try? await SharingManager.shared.pushItem(item, for: list)
+            }
+        }
     }
 
     private func deleteItem(_ item: ListItem) {
         modelContext.delete(item)
         try? modelContext.save()
+
+        // Remove from CloudKit if shared
+        if list.isShared {
+            Task {
+                try? await SharingManager.shared.removeItem(item, for: list)
+            }
+        }
+    }
+
+    private func syncSharedItems() async {
+        guard list.isShared, !isSyncing else { return }
+        isSyncing = true
+        defer { isSyncing = false }
+        do {
+            try await SharingManager.shared.syncItems(for: list, context: modelContext)
+        } catch {
+            errorMessage = "Sync failed: \(error.localizedDescription)"
+            showingError = true
+        }
     }
 }
 

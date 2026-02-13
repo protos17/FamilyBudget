@@ -23,6 +23,12 @@ targets:
     sources:
       - path: Sources/App
       - path: Sources/Shared
+    info:
+      path: App/Resources/Info.plist
+      properties:
+        UIBackgroundModes:
+          - remote-notification
+        CKSharingSupported: true
     entitlements:
       path: App/Resources/App.entitlements
       properties:

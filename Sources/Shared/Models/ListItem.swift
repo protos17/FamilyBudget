@@ -14,14 +14,14 @@ final class ListItem {
     var id: UUID = UUID()
     var text: String = ""
     var createdAt: Date = Date()
-    var modifiedAt: Date? = nil
+    var modifiedAt: Date?
 
     /// CloudKit user record name of the person who created this item.
     /// Used for permission checks in shared lists.
-    var createdByUserID: String? = nil
+    var createdByUserID: String?
 
     /// Parent list
-    var list: ItemList? = nil
+    var list: ItemList?
 
     init(
         id: UUID = UUID(),

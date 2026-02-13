@@ -20,7 +20,6 @@
 //  owner's record name (shareZoneOwnerName) to construct the correct zone ID.
 //
 
-import Foundation
 import CloudKit
 import SwiftData
 import OSLog
@@ -35,15 +34,13 @@ final class SharingManager {
     /// Notification posted when a shared list becomes unavailable
     static let sharingEndedNotification = Notification.Name("SharingManager.sharingEnded")
 
+    /// Notification posted when items have been synced from CloudKit.
+    /// Views should re-sync using their own ModelContext when they receive this.
+    static let itemsDidSyncNotification = Notification.Name("SharingManager.itemsDidSync")
+
     // MARK: - CloudKit Configuration
 
-    private var _container: CKContainer?
-    private var container: CKContainer {
-        if _container == nil {
-            _container = CKContainer(identifier: AppConstants.cloudKitContainerID)
-        }
-        return _container!
-    }
+    private let container = CKContainer(identifier: AppConstants.cloudKitContainerID)
 
     /// CRITICAL: Sharing requires a custom zone. Default zone records cannot be shared.
     private let sharingZone = CKRecordZone(zoneName: "SharedLists")
@@ -51,6 +48,10 @@ final class SharingManager {
 
     private let listRecordType = "SharedList"
     private let itemRecordType = "SharedListItem"
+
+    /// Subscription IDs for CloudKit push notifications
+    private let sharedDBSubscriptionID = "SharedListsSubscription"
+    private let privateZoneSubscriptionID = "SharedListsZoneSubscription"
 
     private init() {}
 
@@ -119,24 +120,21 @@ final class SharingManager {
         try? context.save()
 
         logger.info("Created share for list '\(list.name)'")
+
+        // 7. Push existing items to CloudKit so members can see them
+        do {
+            try await pushAllItems(for: list)
+        } catch {
+            logger.error("Failed to push existing items: \(error)")
+        }
+
         return (share, container)
     }
 
     /// Fetches an existing CKShare by its record name
     private func fetchExistingShare(recordName: String, for list: ItemList) async throws -> CKShare {
-        let isOwner = UserIdentityService.shared.isCurrentUserOwner(of: list)
-
-        let zoneID: CKRecordZone.ID
-        if isOwner {
-            zoneID = sharingZone.zoneID
-        } else if let ownerName = list.shareZoneOwnerName {
-            zoneID = CKRecordZone.ID(zoneName: sharingZone.zoneID.zoneName, ownerName: ownerName)
-        } else {
-            throw SharingError.invalidShare
-        }
-
+        let (database, zoneID) = try databaseAndZone(for: list)
         let shareRecordID = CKRecord.ID(recordName: recordName, zoneID: zoneID)
-        let database = isOwner ? container.privateCloudDatabase : container.sharedCloudDatabase
 
         let record = try await database.record(for: shareRecordID)
         guard let share = record as? CKShare else {
@@ -170,7 +168,9 @@ final class SharingManager {
         }
 
         // Fetch the shared root record to get list metadata
-        let rootRecordID = metadata.rootRecordID
+        guard let rootRecordID = metadata.hierarchicalRootRecordID else {
+            throw SharingError.invalidShare
+        }
         let record = try await container.sharedCloudDatabase.record(for: rootRecordID)
 
         // Create or find the local ItemList
@@ -206,6 +206,10 @@ final class SharingManager {
         try? context.save()
 
         logger.info("Share accepted — created list '\(list.name)'")
+
+        // Sync items from the owner
+        try? await syncItems(for: list, context: context)
+
         return list
     }
 
@@ -250,6 +254,170 @@ final class SharingManager {
         logger.info("Left shared list '\(list.name)'")
     }
 
+    // MARK: - Item Sync
+    //
+    // The CKShare only shares the root list record. Items must be synced
+    // separately as individual CKRecords in the same shared zone.
+    //
+    // Owner  → reads/writes privateCloudDatabase
+    // Member → reads/writes sharedCloudDatabase (with owner's zone ID)
+
+    /// Resolves the correct database and zone for a shared list.
+    /// Owner uses privateCloudDatabase + own zone.
+    /// Member uses sharedCloudDatabase + owner's zone.
+    private func databaseAndZone(for list: ItemList) throws -> (CKDatabase, CKRecordZone.ID) {
+        let isOwner = UserIdentityService.shared.isCurrentUserOwner(of: list)
+
+        let zoneID: CKRecordZone.ID
+        if isOwner {
+            zoneID = sharingZone.zoneID
+        } else if let ownerName = list.shareZoneOwnerName {
+            zoneID = CKRecordZone.ID(zoneName: sharingZone.zoneID.zoneName, ownerName: ownerName)
+        } else {
+            throw SharingError.invalidShare
+        }
+
+        let database = isOwner ? container.privateCloudDatabase : container.sharedCloudDatabase
+        return (database, zoneID)
+    }
+
+    /// Converts a ListItem into a CKRecord linked to its parent list record.
+    ///
+    /// CRITICAL: The parent reference links the item to the shared list record.
+    /// Without this, the item exists in the zone but is NOT part of the
+    /// CKShare hierarchy — members won't be able to see it.
+    private func makeItemRecord(
+        for item: ListItem,
+        listID: UUID,
+        zoneID: CKRecordZone.ID
+    ) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: "Item-\(item.id.uuidString)", zoneID: zoneID)
+        let record = CKRecord(recordType: itemRecordType, recordID: recordID)
+        record["itemID"] = item.id.uuidString as CKRecordValue
+        record["listID"] = listID.uuidString as CKRecordValue
+        record["text"] = item.text as CKRecordValue
+        record["createdByUserID"] = (item.createdByUserID ?? "") as CKRecordValue
+        record["createdAt"] = item.createdAt as CKRecordValue
+
+        let listRecordID = CKRecord.ID(recordName: "List-\(listID.uuidString)", zoneID: zoneID)
+        record.parent = CKRecord.Reference(recordID: listRecordID, action: .none)
+        return record
+    }
+
+    /// Pushes a single item to the shared CloudKit zone.
+    /// Called after the user adds an item to a shared list.
+    func pushItem(_ item: ListItem, for list: ItemList) async throws {
+        guard list.isShared else { return }
+
+        let (database, zoneID) = try databaseAndZone(for: list)
+        let record = makeItemRecord(for: item, listID: list.id, zoneID: zoneID)
+
+        _ = try await database.save(record)
+        logger.info("Pushed item '\(item.text)' to CloudKit")
+    }
+
+    /// Removes an item from the shared CloudKit zone.
+    /// Called after the user deletes an item from a shared list.
+    func removeItem(_ item: ListItem, for list: ItemList) async throws {
+        guard list.isShared else { return }
+
+        let (database, zoneID) = try databaseAndZone(for: list)
+        let recordID = CKRecord.ID(recordName: "Item-\(item.id.uuidString)", zoneID: zoneID)
+
+        do {
+            try await database.deleteRecord(withID: recordID)
+            logger.info("Removed item '\(item.text)' from CloudKit")
+        } catch let error as CKError where error.code == .unknownItem {
+            // Already deleted remotely — ignore
+        }
+    }
+
+    /// Pushes all existing items for a list to CloudKit.
+    /// Called when sharing is first created so pre-existing items are available to members.
+    func pushAllItems(for list: ItemList) async throws {
+        guard list.isShared else { return }
+
+        let items = list.items ?? []
+        guard !items.isEmpty else { return }
+
+        let (database, zoneID) = try databaseAndZone(for: list)
+        let records = items.map { makeItemRecord(for: $0, listID: list.id, zoneID: zoneID) }
+
+        try await saveRecords(records, to: database)
+        logger.info("Pushed \(records.count) items to CloudKit for list '\(list.name)'")
+    }
+
+    /// Fetches items from CloudKit and merges with local SwiftData.
+    /// - Adds remote items that don't exist locally
+    /// - Removes local items created by OTHER users that no longer exist remotely
+    /// - Pushes local items created by the current user that aren't in CloudKit yet
+    func syncItems(for list: ItemList, context: ModelContext) async throws {
+        guard list.isShared else { return }
+        await UserIdentityService.shared.ensureIdentityResolved()
+
+        let (database, zoneID) = try databaseAndZone(for: list)
+
+        // Fetch all remote items for this list
+        let predicate = NSPredicate(format: "listID == %@", list.id.uuidString)
+        let query = CKQuery(recordType: itemRecordType, predicate: predicate)
+        query.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
+
+        let (matchResults, _) = try await database.records(matching: query, inZoneWith: zoneID)
+
+        // Build set of remote item IDs and their records
+        var remoteItems: [UUID: CKRecord] = [:]
+        for (recordID, result) in matchResults {
+            switch result {
+            case .success(let record):
+                if let idString = record["itemID"] as? String, let uuid = UUID(uuidString: idString) {
+                    remoteItems[uuid] = record
+                }
+            case .failure(let error):
+                logger.error("Failed to fetch record \(recordID): \(error)")
+            }
+        }
+
+        let localItems = list.items ?? []
+        let localItemIDs = Set(localItems.map { $0.id })
+        let currentUserID = UserIdentityService.shared.currentUserID
+
+        // 1. Add remote items that don't exist locally
+        for (uuid, record) in remoteItems where !localItemIDs.contains(uuid) {
+            let item = ListItem(
+                id: uuid,
+                text: (record["text"] as? String) ?? "",
+                createdByUserID: record["createdByUserID"] as? String
+            )
+            if let createdAt = record["createdAt"] as? Date {
+                item.createdAt = createdAt
+            }
+            item.list = list
+            context.insert(item)
+            logger.debug("Synced remote item '\(item.text)' to local")
+        }
+
+        // 2. Remove local items from OTHER users that were deleted remotely
+        for item in localItems {
+            let isMyItem = item.createdByUserID == currentUserID || item.createdByUserID == nil
+            if !isMyItem && !remoteItems.keys.contains(item.id) {
+                context.delete(item)
+                logger.debug("Removed locally synced item '\(item.text)' (deleted remotely)")
+            }
+        }
+
+        // 3. Push local items that aren't in CloudKit yet
+        let itemsToPush = localItems.filter { !remoteItems.keys.contains($0.id) }
+        if !itemsToPush.isEmpty {
+            let records = itemsToPush.map { makeItemRecord(for: $0, listID: list.id, zoneID: zoneID) }
+            try await saveRecords(records, to: database)
+            logger.info("Pushed \(records.count) local items to CloudKit")
+        }
+
+        try? context.save()
+        list.lastSharedUpdatedAt = Date()
+        logger.info("Sync complete for '\(list.name)': \(remoteItems.count) remote, \(localItems.count) local")
+    }
+
     // MARK: - Sharing Availability
 
     /// Whether CloudKit sharing is available on this device
@@ -268,6 +436,22 @@ final class SharingManager {
         } catch let error as CKError where error.code == .zoneNotFound {
             _ = try await container.privateCloudDatabase.save(sharingZone)
             zoneCreated = true
+        }
+    }
+
+    /// Batch-saves records using CKModifyRecordsOperation with `.changedKeys` policy.
+    private func saveRecords(_ records: [CKRecord], to database: CKDatabase) async throws {
+        let operation = CKModifyRecordsOperation(recordsToSave: records, recordIDsToDelete: nil)
+        operation.savePolicy = .changedKeys
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            operation.modifyRecordsResultBlock = { result in
+                switch result {
+                case .success: continuation.resume()
+                case .failure(let error): continuation.resume(throwing: error)
+                }
+            }
+            database.add(operation)
         }
     }
 
@@ -305,6 +489,86 @@ final class SharingManager {
                 // Non-CKError: ignore
             }
         }
+    }
+
+    // MARK: - CloudKit Subscriptions
+    //
+    // Two subscriptions ensure real-time sync via silent push notifications:
+    //
+    // 1. CKDatabaseSubscription on sharedCloudDatabase
+    //    → Notifies MEMBERS when the owner (or other members) change items
+    //
+    // 2. CKRecordZoneSubscription on privateCloudDatabase (SharedLists zone)
+    //    → Notifies the OWNER when members change items in the shared zone
+
+    /// Registers CloudKit subscriptions for real-time sync.
+    /// Called once on app launch after identity is resolved.
+    func registerSubscriptions() async {
+        guard isSharingAvailable else { return }
+
+        let notificationInfo = CKSubscription.NotificationInfo()
+        notificationInfo.shouldSendContentAvailable = true // Silent push
+
+        // 1. Subscribe to shared database (for members receiving owner's changes)
+        let sharedDBSub = CKDatabaseSubscription(subscriptionID: sharedDBSubscriptionID)
+        sharedDBSub.notificationInfo = notificationInfo
+
+        do {
+            _ = try await container.sharedCloudDatabase.modifySubscriptions(
+                saving: [sharedDBSub], deleting: []
+            )
+            logger.info("Registered shared database subscription")
+        } catch let error as CKError where error.code == .serverRejectedRequest {
+            // Already exists — fine
+        } catch {
+            logger.error("Failed to register shared DB subscription: \(error)")
+        }
+
+        // 2. Subscribe to the SharedLists zone (for owners receiving members' changes)
+        do {
+            try await ensureZoneExists()
+            let zoneSub = CKRecordZoneSubscription(
+                zoneID: sharingZone.zoneID,
+                subscriptionID: privateZoneSubscriptionID
+            )
+            zoneSub.notificationInfo = notificationInfo
+
+            _ = try await container.privateCloudDatabase.modifySubscriptions(
+                saving: [zoneSub], deleting: []
+            )
+            logger.info("Registered private zone subscription")
+        } catch let error as CKError where error.code == .serverRejectedRequest {
+            // Already exists — fine
+        } catch {
+            logger.error("Failed to register zone subscription: \(error)")
+        }
+    }
+
+    /// Handles a CloudKit remote notification by syncing all shared lists.
+    /// Called from the app delegate's didReceiveRemoteNotification.
+    func handleRemoteNotification(userInfo: [AnyHashable: Any]) async {
+        let notification = CKNotification(fromRemoteNotificationDictionary: userInfo)
+        guard notification is CKDatabaseNotification || notification is CKRecordZoneNotification else {
+            return
+        }
+
+        logger.info("Received CloudKit push — syncing shared lists")
+
+        let context = ModelContext(DataManager.shared.container)
+        let descriptor = FetchDescriptor<ItemList>(predicate: #Predicate { $0.isShared == true })
+        guard let lists = try? context.fetch(descriptor) else { return }
+
+        for list in lists {
+            do {
+                try await syncItems(for: list, context: context)
+            } catch {
+                logger.error("Push sync failed for '\(list.name)': \(error)")
+            }
+        }
+
+        // Notify views to refresh — SwiftData cross-context merge
+        // may not trigger @Query updates for relationship predicates.
+        NotificationCenter.default.post(name: SharingManager.itemsDidSyncNotification, object: nil)
     }
 
     /// Converts a shared list to a local copy after sharing ended

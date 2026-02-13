@@ -38,10 +38,12 @@ struct CloudKitSharingApp: App {
     }
 
     private func seedDataIfNeeded() {
-        let defaults = UserDefaults.standard
-        guard !defaults.bool(forKey: "hasSeededData") else { return }
-
         let context = ModelContext(DataManager.shared.container)
+
+        // Check the database — not UserDefaults — because CloudKit sync
+        // brings back data after reinstall while UserDefaults resets.
+        let count = (try? context.fetchCount(FetchDescriptor<ItemList>())) ?? 0
+        guard count == 0 else { return }
 
         let groceries = ItemList(name: "Groceries", icon: "cart.fill", colorHex: "34C759", sortOrder: 0)
         let travel = ItemList(name: "Travel Plans", icon: "airplane", colorHex: "FF9500", sortOrder: 1)
@@ -63,7 +65,6 @@ struct CloudKitSharingApp: App {
         }
 
         try? context.save()
-        defaults.set(true, forKey: "hasSeededData")
     }
 }
 
@@ -89,12 +90,40 @@ class CloudKitShareCoordinator: ObservableObject {
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        // Register for silent push notifications (CloudKit sync)
+        application.registerForRemoteNotifications()
+
+        // Register CloudKit subscriptions for real-time item sync
+        Task { @MainActor in
+            await UserIdentityService.shared.ensureIdentityResolved()
+            await SharingManager.shared.registerSubscriptions()
+        }
+
+        return true
+    }
+
+    func application(
+        _ application: UIApplication,
         configurationForConnecting connectingSceneSession: UISceneSession,
         options: UIScene.ConnectionOptions
     ) -> UISceneConfiguration {
         let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
         config.delegateClass = SceneDelegate.self
         return config
+    }
+
+    /// Handle CloudKit silent push notifications — triggers item sync
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        Task { @MainActor in
+            await SharingManager.shared.handleRemoteNotification(userInfo: userInfo)
+            completionHandler(.newData)
+        }
     }
 }
 
@@ -104,14 +133,12 @@ class SceneDelegate: NSObject, UIWindowSceneDelegate {
         _ windowScene: UIWindowScene,
         userDidAcceptCloudKitShareWith metadata: CKShare.Metadata
     ) {
-        print("[CloudKit] Accepting share invitation")
         CloudKitShareCoordinator.shared.handleShareMetadata(metadata)
     }
 
     /// Called when the app is launched via a CloudKit share link
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         if let metadata = connectionOptions.cloudKitShareMetadata {
-            print("[CloudKit] Accepting share invitation from launch")
             CloudKitShareCoordinator.shared.handleShareMetadata(metadata)
         }
     }
@@ -131,18 +158,17 @@ private struct CloudKitShareHandler: View {
             .frame(width: 0, height: 0)
             .onChange(of: coordinator.pendingShareMetadata) { _, metadata in
                 guard let metadata else { return }
-                Task { @MainActor in
+                Task {
+                    defer { CloudKitShareCoordinator.shared.clearPendingShare() }
                     do {
                         let list = try await SharingManager.shared.acceptShare(
                             metadata,
                             context: modelContext
                         )
-                        CloudKitShareCoordinator.shared.clearPendingShare()
                         acceptedListName = list.name
                         showingAccepted = true
                     } catch {
-                        print("[CloudKit] Failed to accept share: \(error)")
-                        CloudKitShareCoordinator.shared.clearPendingShare()
+                        // Share acceptance failed — metadata cleared by defer
                     }
                 }
             }

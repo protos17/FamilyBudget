@@ -19,6 +19,10 @@ struct ListsView: View {
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 12) {
+                    if !UserIdentityService.shared.isCloudKitAvailable {
+                        iCloudBanner
+                    }
+
                     ForEach(lists) { list in
                         NavigationLink(destination: ListDetailView(list: list)) {
                             ListRow(list: list)
@@ -68,6 +72,24 @@ struct ListsView: View {
                 }
             }
         }
+    }
+
+    private var iCloudBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "icloud.slash")
+                .font(.title3)
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("iCloud Not Available")
+                    .font(.subheadline.weight(.medium))
+                Text("Sign in to iCloud in Settings to enable sharing.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(Color(.systemOrange).opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
     }
 
     private func addList() {

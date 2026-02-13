@@ -23,8 +23,6 @@
 //  This prevents the UI from showing actions the server would reject anyway.
 //
 
-import Foundation
-
 @MainActor
 final class PermissionManager {
     static let shared = PermissionManager()

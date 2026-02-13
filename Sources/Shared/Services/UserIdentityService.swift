@@ -16,7 +16,6 @@
 //  stable local device identifier.
 //
 
-import Foundation
 import CloudKit
 
 /// Protocol for dependency injection in tests
@@ -62,10 +61,7 @@ final class UserIdentityService: UserIdentityProviding {
             let container = CKContainer(identifier: AppConstants.cloudKitContainerID)
             let userRecordID = try await container.userRecordID()
             currentUserID = userRecordID.recordName
-            print("[UserIdentity] CloudKit user: \(userRecordID.recordName)")
         } catch {
-            print("[UserIdentity] CloudKit unavailable: \(error.localizedDescription)")
-            print("[UserIdentity] Using local device ID: \(localDeviceID)")
             currentUserID = localDeviceID
         }
     }

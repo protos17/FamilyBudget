@@ -48,7 +48,7 @@ struct CloudSharingView: UIViewControllerRepresentable {
             _ csc: UICloudSharingController,
             failedToSaveShareWithError error: Error
         ) {
-            print("[CloudSharing] Failed to save share: \(error)")
+            // Error is shown by UICloudSharingController
         }
 
         func itemTitle(for csc: UICloudSharingController) -> String? {
@@ -85,13 +85,11 @@ struct CloudSharingView: UIViewControllerRepresentable {
                 do {
                     try await SharingManager.shared.stopSharing(parent.list, context: parent.context)
                 } catch {
-                    print("[CloudSharing] Error stopping share: \(error)")
+                    // Silently fail — user can retry from the menu
                 }
             }
         }
 
-        func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {
-            print("[CloudSharing] Share saved successfully")
-        }
+        func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {}
     }
 }

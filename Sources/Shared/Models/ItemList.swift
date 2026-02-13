@@ -33,16 +33,16 @@ final class ItemList {
     var isShared: Bool = false
 
     /// CloudKit user record name of the list owner
-    var ownerID: String? = nil
+    var ownerID: String?
 
     /// CKShare record name — used to fetch the share when managing participants
-    var shareRecordID: String? = nil
+    var shareRecordID: String?
 
     /// CKRecordZone.ID.ownerName — invitees need this to query the shared zone
-    var shareZoneOwnerName: String? = nil
+    var shareZoneOwnerName: String?
 
     /// Timestamp of last CloudKit sync for this list
-    var lastSharedUpdatedAt: Date? = nil
+    var lastSharedUpdatedAt: Date?
 
     /// Whether the owner has an active subscription (always true in this demo)
     var isPro: Bool = true
