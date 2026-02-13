@@ -167,14 +167,19 @@ struct ListDetailView: View {
 
     private var shareButton: some View {
         Menu {
-            if permissions.canShareList(list) || list.isShared {
+            if !list.isShared && permissions.canShareList(list) {
                 Button {
                     presentSharing()
                 } label: {
-                    Label(
-                        list.isShared ? "Manage Sharing" : "Share List",
-                        systemImage: list.isShared ? "person.2.fill" : "person.badge.plus"
-                    )
+                    Label("Share List", systemImage: "person.badge.plus")
+                }
+            }
+
+            if list.isShared && permissions.canManageSharing(for: list) {
+                Button {
+                    presentSharing()
+                } label: {
+                    Label("Manage Sharing", systemImage: "person.2.fill")
                 }
             }
 

@@ -105,6 +105,8 @@ Every UI action is gated by centralized permission checks:
 | Manage sharing | Yes | **No** |
 | Leave shared list | **No** | Yes |
 
+This demo intentionally allows private read/write participants only (`.allowReadWrite` + `.allowPrivate` in `UICloudSharingController`). Read-only participants are not exposed in the sharing UI.
+
 ### 6. Three-Layer Real-Time Sync
 
 Keeping shared lists in sync requires multiple mechanisms working together. No single approach is reliable on its own:
@@ -258,7 +260,7 @@ flowchart TD
 
     SYNC --> F1["Fetch remote CKRecords<br/>(CKQuery on shared zone)"]
     SYNC --> F2["Add missing remote items locally"]
-    SYNC --> F3["Remove orphaned items<br/>(other users' deleted items)"]
+    SYNC --> F3["Remove items missing remotely<br/>(previously synced items only)"]
     SYNC --> F4["Push local items not yet<br/>in CloudKit"]
 
     F2 --> SAVE["context.save()"]
@@ -481,6 +483,10 @@ CloudKit push notifications are unreliable on dev devices and can be delayed in 
 
 This is the same pattern used in ToMe. The timer only runs while the shared list detail view is visible.
 
+### Ended-Share Health Check
+
+`ListsView` also checks shared-list availability on appear and every 30 seconds. If a share is revoked (or the zone disappears), `SharingManager.checkForEndedSharing(...)` converts the list to local and posts `sharingEndedNotification`.
+
 ### Permission Checks
 
 ```swift
@@ -568,12 +574,19 @@ These fields let the app reconstruct the correct `CKRecordZone.ID` and `CKRecord
 | Permission errors after sharing | Always check `PermissionManager` before destructive actions — the server will reject unauthorized writes |
 | User identity is nil on launch | Call `ensureIdentityResolved()` before critical operations — the fetch is async |
 | `UICloudSharingController` crashes | Must pass a valid `CKShare` and `CKContainer` — fetch or create the share first |
+| Read-only participant behavior is inconsistent | This demo intentionally disables `.allowReadOnly`; it supports private + read/write participants only |
 | Shared list appears twice | Check by list UUID before creating a local copy on share acceptance |
 | App crashes without iCloud | Fall back to `cloudKitDatabase: .none` and show a banner (see `DataManager`) |
 | CloudKit push errors in console | Add `remote-notification` to `UIBackgroundModes` in Info.plist |
 | `rootRecordID` deprecation warning | Use `hierarchicalRootRecordID` (iOS 16+) instead |
 | App renders in small window | Include `UILaunchScreen` in Info.plist (set via `INFOPLIST_KEY_UILaunchScreen_Generation: YES`) |
 | Subscription already exists error | Catch `CKError.serverRejectedRequest` when registering subscriptions — it means the subscription already exists |
+
+## Known Limitations
+
+- This demo intentionally supports private + read/write participants only (`.allowReadWrite` + `.allowPrivate`). Read-only participants are not exposed.
+- Item sync currently handles create/delete flows (including remote-delete protection). It does not yet implement full field-level conflict resolution for concurrent edits.
+- Real-time behavior still depends on CloudKit delivery conditions; the 5-second polling layer is the primary reliability mechanism.
 
 ## Schema Migrations
 
