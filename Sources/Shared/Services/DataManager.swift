@@ -19,7 +19,7 @@ import WidgetKit
 
 /// Non-isolated constants accessible from any actor.
 enum AppConstants {
-    static let cloudKitContainerID = "iCloud.com.example.cloudkitsharing"
+    static let cloudKitContainerID = "iCloud.ru.protos.cloudkitsharing"
 }
 
 @MainActor

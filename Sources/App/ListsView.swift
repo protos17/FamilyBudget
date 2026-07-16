@@ -10,7 +10,7 @@ import SwiftData
 
 struct ListsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \ItemList.sortOrder) private var lists: [ItemList]
+    @Query(sort: \Account.sortOrder) private var lists: [Account]
     @State private var showingAddList = false
     @State private var newListName = ""
     @State private var sharingEndedName: String?
@@ -103,7 +103,7 @@ struct ListsView: View {
 
     private func addList() {
         guard !newListName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        let list = ItemList(name: newListName, sortOrder: lists.count)
+        let list = Account(name: newListName, sortOrder: lists.count)
         modelContext.insert(list)
         try? modelContext.save()
         newListName = ""
@@ -119,7 +119,7 @@ struct ListsView: View {
 // MARK: - List Row
 
 private struct ListRow: View {
-    let list: ItemList
+    let list: Account
 
     var body: some View {
         HStack(spacing: 14) {
@@ -159,7 +159,7 @@ private struct ListRow: View {
     }
 
     private var itemCountLabel: String {
-        let count = list.items?.count ?? 0
+        let count = list.transactions?.count ?? 0
         return count == 1 ? "1 item" : "\(count) items"
     }
 }

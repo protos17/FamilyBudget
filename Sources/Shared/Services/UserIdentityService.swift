@@ -23,8 +23,8 @@ import CloudKit
 protocol UserIdentityProviding {
     var currentUserID: String? { get }
     var isCloudKitAvailable: Bool { get }
-    func isCurrentUserOwner(of list: ItemList) -> Bool
-    func didCurrentUserCreate(_ item: ListItem) -> Bool
+    func isCurrentUserOwner(of list: Account) -> Bool
+    func didCurrentUserCreate(_ item: Transaction) -> Bool
 }
 
 @MainActor
@@ -82,7 +82,7 @@ final class UserIdentityService: UserIdentityProviding {
 
     // MARK: - Permission Helpers
 
-    func isCurrentUserOwner(of list: ItemList) -> Bool {
+    func isCurrentUserOwner(of list: Account) -> Bool {
         guard let ownerID = list.ownerID else {
             // No owner set → current user is owner (pre-sharing state)
             return true
@@ -90,7 +90,7 @@ final class UserIdentityService: UserIdentityProviding {
         return ownerID == currentUserID
     }
 
-    func didCurrentUserCreate(_ item: ListItem) -> Bool {
+    func didCurrentUserCreate(_ item: Transaction) -> Bool {
         guard let creatorID = item.createdByUserID else {
             return true // No creator recorded → assume local
         }

@@ -25,46 +25,12 @@ import CloudKit
 struct CloudKitSharingApp: App {
     @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
-    init() {
-        seedDataIfNeeded()
-    }
-
     var body: some Scene {
         WindowGroup {
             ListsView()
                 .overlay(CloudKitShareHandler())
         }
         .modelContainer(DataManager.shared.container)
-    }
-
-    private func seedDataIfNeeded() {
-        let context = ModelContext(DataManager.shared.container)
-
-        // Check the database — not UserDefaults — because CloudKit sync
-        // brings back data after reinstall while UserDefaults resets.
-        let count = (try? context.fetchCount(FetchDescriptor<ItemList>())) ?? 0
-        guard count == 0 else { return }
-
-        let groceries = ItemList(name: "Groceries", icon: "cart.fill", colorHex: "34C759", sortOrder: 0)
-        let travel = ItemList(name: "Travel Plans", icon: "airplane", colorHex: "FF9500", sortOrder: 1)
-
-        context.insert(groceries)
-        context.insert(travel)
-
-        let items: [(String, ItemList)] = [
-            ("Avocados", groceries),
-            ("Sourdough bread", groceries),
-            ("Oat milk", groceries),
-            ("Book flights to Tokyo", travel),
-            ("Reserve ryokan", travel),
-        ]
-        for (text, list) in items {
-            let item = ListItem(text: text)
-            item.list = list
-            context.insert(item)
-        }
-
-        try? context.save()
     }
 }
 

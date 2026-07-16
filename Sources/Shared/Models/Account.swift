@@ -19,11 +19,12 @@ import Foundation
 import SwiftData
 
 @Model
-final class ItemList {
+final class Account {
     var id: UUID = UUID()
     var name: String = ""
-    var icon: String = "list.bullet"
+    var icon: String = "creditcard"
     var colorHex: String = "007AFF"
+    var currencyCode: String = "RUB"
     var createdAt: Date = Date()
     var sortOrder: Int = 0
 
@@ -50,23 +51,29 @@ final class ItemList {
     // MARK: - Relationships
 
     @Relationship(deleteRule: .cascade)
-    var items: [ListItem]? = []
+    var transactions: [Transaction]? = []
 
-    var sortedItems: [ListItem] {
-        items?.sorted(by: { $0.createdAt > $1.createdAt }) ?? []
+    @Relationship(deleteRule: .cascade)
+    var categories: [Category]? = []
+
+    var sortedTransactions: [Transaction] {
+        transactions?.sorted(by: { $0.date > $1.date }) ?? []
     }
 
     init(
         id: UUID = UUID(),
         name: String,
-        icon: String = "list.bullet",
+        icon: String = "creditcard",
         colorHex: String = "007AFF",
+        currencyCode: String = "RUB",
         sortOrder: Int = 0
     ) {
         self.id = id
         self.name = name
         self.icon = icon
         self.colorHex = colorHex
+        self.currencyCode = currencyCode
         self.sortOrder = sortOrder
     }
 }
+

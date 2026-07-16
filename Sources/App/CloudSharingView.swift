@@ -18,7 +18,7 @@ import CloudKit
 import SwiftData
 
 struct CloudSharingView: UIViewControllerRepresentable {
-    let list: ItemList
+    let list: Account
     let context: ModelContext
     let container: CKContainer
     let share: CKShare

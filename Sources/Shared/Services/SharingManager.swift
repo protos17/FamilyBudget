@@ -29,7 +29,7 @@ import OSLog
 final class SharingManager {
     static let shared = SharingManager()
 
-    private let logger = Logger(subsystem: "com.example.cloudkitsharing", category: "Sharing")
+    private let logger = Logger(subsystem: "ru.protos.cloudkitsharing", category: "Sharing")
 
     /// Notification posted when a shared list becomes unavailable
     static let sharingEndedNotification = Notification.Name("SharingManager.sharingEnded")
@@ -60,7 +60,7 @@ final class SharingManager {
     /// Creates a CKShare for a list, or returns the existing one.
     /// This is called when the user taps "Share" on a list.
     func fetchOrCreateShare(
-        for list: ItemList,
+        for list: Account,
         context: ModelContext
     ) async throws -> (CKShare, CKContainer) {
         // If the list already has a share, fetch and return it
@@ -132,7 +132,7 @@ final class SharingManager {
     }
 
     /// Fetches an existing CKShare by its record name
-    private func fetchExistingShare(recordName: String, for list: ItemList) async throws -> CKShare {
+    private func fetchExistingShare(recordName: String, for list: Account) async throws -> CKShare {
         let (database, zoneID) = try databaseAndZone(for: list)
         let shareRecordID = CKRecord.ID(recordName: recordName, zoneID: zoneID)
 
@@ -150,7 +150,7 @@ final class SharingManager {
     func acceptShare(
         _ metadata: CKShare.Metadata,
         context: ModelContext
-    ) async throws -> ItemList {
+    ) async throws -> Account {
         await UserIdentityService.shared.ensureIdentityResolved()
 
         // Accept the share via CloudKit
@@ -182,14 +182,14 @@ final class SharingManager {
         }
 
         // Check if list already exists locally
-        let descriptor = FetchDescriptor<ItemList>(predicate: #Predicate { $0.id == listID })
+        let descriptor = FetchDescriptor<Account>(predicate: #Predicate { $0.id == listID })
         if let existing = try? context.fetch(descriptor).first {
             logger.info("Share accepted — list '\(existing.name)' already exists locally")
             return existing
         }
 
         // Create new local list from the shared record
-        let list = ItemList(
+        let list = Account(
             id: listID,
             name: (record["name"] as? String) ?? "Shared List",
             icon: (record["icon"] as? String) ?? "list.bullet",
@@ -216,7 +216,7 @@ final class SharingManager {
     // MARK: - Stop Sharing
 
     /// Owner stops sharing a list. Removes the CKShare.
-    func stopSharing(_ list: ItemList, context: ModelContext) async throws {
+    func stopSharing(_ list: Account, context: ModelContext) async throws {
         guard list.isShared else { throw SharingError.notShared }
         guard UserIdentityService.shared.isCurrentUserOwner(of: list) else {
             throw SharingError.ownerCannotLeave
@@ -241,7 +241,7 @@ final class SharingManager {
     // MARK: - Leave Shared List (Member)
 
     /// Member leaves a shared list. Removes the local copy.
-    func leaveSharedList(_ list: ItemList, context: ModelContext) async throws {
+    func leaveSharedList(_ list: Account, context: ModelContext) async throws {
         guard list.isShared else { throw SharingError.notShared }
         guard !UserIdentityService.shared.isCurrentUserOwner(of: list) else {
             throw SharingError.ownerCannotLeave
@@ -265,7 +265,7 @@ final class SharingManager {
     /// Resolves the correct database and zone for a shared list.
     /// Owner uses privateCloudDatabase + own zone.
     /// Member uses sharedCloudDatabase + owner's zone.
-    private func databaseAndZone(for list: ItemList) throws -> (CKDatabase, CKRecordZone.ID) {
+    private func databaseAndZone(for list: Account) throws -> (CKDatabase, CKRecordZone.ID) {
         let isOwner = UserIdentityService.shared.isCurrentUserOwner(of: list)
 
         let zoneID: CKRecordZone.ID
@@ -287,7 +287,7 @@ final class SharingManager {
     /// Without this, the item exists in the zone but is NOT part of the
     /// CKShare hierarchy — members won't be able to see it.
     private func makeItemRecord(
-        for item: ListItem,
+        for item: Transaction,
         listID: UUID,
         zoneID: CKRecordZone.ID
     ) -> CKRecord {
@@ -295,18 +295,39 @@ final class SharingManager {
         let record = CKRecord(recordType: itemRecordType, recordID: recordID)
         record["itemID"] = item.id.uuidString as CKRecordValue
         record["listID"] = listID.uuidString as CKRecordValue
-        record["text"] = item.text as CKRecordValue
+        record["title"] = item.title as CKRecordValue
         record["createdByUserID"] = (item.createdByUserID ?? "") as CKRecordValue
+        record["createdByDisplayName"] = (item.createdByDisplayName ?? "") as CKRecordValue
         record["createdAt"] = item.createdAt as CKRecordValue
+        record["modifiedAt"] = (item.modifiedAt ?? item.createdAt) as CKRecordValue
+
+        // Новые поля Transaction
+        record["amountMinorUnits"] = item.amountMinorUnits as CKRecordValue
+        record["type"] = item.type.rawValue as CKRecordValue
+        record["date"] = item.date as CKRecordValue
+        record["paymentMethod"] = item.paymentMethod.rawValue as CKRecordValue
+
+        if let note = item.note {
+            record["note"] = note as CKRecordValue
+        }
+
+        if !item.tags.isEmpty {
+            record["tags"] = item.tags as CKRecordValue
+        }
+
+        if let categoryID = item.category?.id {
+            record["categoryID"] = categoryID.uuidString as CKRecordValue
+        }
 
         let listRecordID = CKRecord.ID(recordName: "List-\(listID.uuidString)", zoneID: zoneID)
         record.parent = CKRecord.Reference(recordID: listRecordID, action: .none)
         return record
     }
 
+
     /// Pushes a single item to the shared CloudKit zone.
     /// Called after the user adds an item to a shared list.
-    func pushItem(_ item: ListItem, for list: ItemList) async throws {
+    func pushItem(_ item: Transaction, for list: Account) async throws {
         guard list.isShared else { return }
 
         let (database, zoneID) = try databaseAndZone(for: list)
@@ -317,12 +338,12 @@ final class SharingManager {
         // can distinguish "deleted remotely" from "not uploaded yet".
         item.modifiedAt = Date()
         try? item.modelContext?.save()
-        logger.info("Pushed item '\(item.text)' to CloudKit")
+        logger.info("Pushed item '\(item.title)' to CloudKit")
     }
 
     /// Removes an item from the shared CloudKit zone.
     /// Called after the user deletes an item from a shared list.
-    func removeItem(_ item: ListItem, for list: ItemList) async throws {
+    func removeItem(_ item: Transaction, for list: Account) async throws {
         guard list.isShared else { return }
 
         let (database, zoneID) = try databaseAndZone(for: list)
@@ -330,7 +351,7 @@ final class SharingManager {
 
         do {
             try await database.deleteRecord(withID: recordID)
-            logger.info("Removed item '\(item.text)' from CloudKit")
+            logger.info("Removed item '\(item.title)' from CloudKit")
         } catch let error as CKError where error.code == .unknownItem {
             // Already deleted remotely — ignore
         }
@@ -338,10 +359,10 @@ final class SharingManager {
 
     /// Pushes all existing items for a list to CloudKit.
     /// Called when sharing is first created so pre-existing items are available to members.
-    func pushAllItems(for list: ItemList) async throws {
+    func pushAllItems(for list: Account) async throws {
         guard list.isShared else { return }
 
-        let items = list.items ?? []
+        let items = list.transactions ?? []
         guard !items.isEmpty else { return }
 
         let (database, zoneID) = try databaseAndZone(for: list)
@@ -360,7 +381,7 @@ final class SharingManager {
     /// - Adds remote items that don't exist locally
     /// - Removes locally cached items that were previously synced but no longer exist remotely
     /// - Pushes local items that have never been confirmed in CloudKit yet
-    func syncItems(for list: ItemList, context: ModelContext) async throws {
+    func syncItems(for list: Account, context: ModelContext) async throws {
         guard list.isShared else { return }
         await UserIdentityService.shared.ensureIdentityResolved()
 
@@ -386,24 +407,47 @@ final class SharingManager {
             }
         }
 
-        let localItems = list.items ?? []
+        let localItems = list.transactions ?? []
         let localItemIDs = Set(localItems.map { $0.id })
         // 1. Add remote items that don't exist locally
         for (uuid, record) in remoteItems where !localItemIDs.contains(uuid) {
-            let item = ListItem(
+            let typeRaw = record["type"] as? String
+            let type = typeRaw.flatMap(TransactionType.init(rawValue:)) ?? .expense
+
+            let item = Transaction(
                 id: uuid,
-                text: (record["text"] as? String) ?? "",
+                title: (record["title"] as? String) ?? "",
+                amountMinorUnits: (record["amountMinorUnits"] as? Int) ?? 0,
+                type: type,
+                date: (record["date"] as? Date) ?? Date(),
                 createdByUserID: record["createdByUserID"] as? String
             )
+
+            item.createdByDisplayName = record["createdByDisplayName"] as? String
+            item.note = record["note"] as? String
+            item.tags = (record["tags"] as? [String]) ?? []
+
+            if let paymentRaw = record["paymentMethod"] as? String {
+                item.paymentMethod = PaymentMethod(rawValue: paymentRaw) ?? .other
+            }
+
             if let createdAt = record["createdAt"] as? Date {
                 item.createdAt = createdAt
             }
+
+            // Резолв категории по categoryID, если она уже есть локально
+            if let categoryIDString = record["categoryID"] as? String,
+               let categoryUUID = UUID(uuidString: categoryIDString) {
+                item.category = list.categories?.first(where: { $0.id == categoryUUID })
+            }
+
             // Presence in remote means this item is already synced.
             item.modifiedAt = Date()
-            item.list = list
+            item.account = list
             context.insert(item)
-            logger.debug("Synced remote item '\(item.text)' to local")
+            logger.debug("Synced remote item '\(item.title)' to local")
         }
+
 
         // Mark local items that we can see remotely as synced.
         for item in localItems where remoteItems.keys.contains(item.id) && item.modifiedAt == nil {
@@ -417,7 +461,7 @@ final class SharingManager {
             let wasPreviouslySynced = item.modifiedAt != nil
             if missingRemotely && wasPreviouslySynced {
                 context.delete(item)
-                logger.debug("Removed item '\(item.text)' (deleted remotely)")
+                logger.debug("Removed item '\(item.title)' (deleted remotely)")
             }
         }
 
@@ -482,7 +526,7 @@ final class SharingManager {
     // MARK: - Detect Ended Sharing
 
     /// Checks if any shared lists the user was invited to have become unavailable.
-    func checkForEndedSharing(in lists: [ItemList], context: ModelContext) async {
+    func checkForEndedSharing(in lists: [Account], context: ModelContext) async {
         await UserIdentityService.shared.ensureIdentityResolved()
 
         for list in lists where list.isShared {
@@ -579,7 +623,7 @@ final class SharingManager {
         logger.info("Received CloudKit push — syncing shared lists")
 
         let context = ModelContext(DataManager.shared.container)
-        let descriptor = FetchDescriptor<ItemList>(predicate: #Predicate { $0.isShared == true })
+        let descriptor = FetchDescriptor<Account>(predicate: #Predicate { $0.isShared == true })
         guard let lists = try? context.fetch(descriptor) else { return }
 
         for list in lists {
@@ -596,7 +640,7 @@ final class SharingManager {
     }
 
     /// Converts a shared list to a local copy after sharing ended
-    private func convertToLocalCopy(_ list: ItemList, context: ModelContext) {
+    private func convertToLocalCopy(_ list: Account, context: ModelContext) {
         let name = list.name
         list.isShared = false
         list.ownerID = nil

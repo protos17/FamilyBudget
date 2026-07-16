@@ -39,7 +39,7 @@ final class PermissionManager {
     // MARK: - Item Permissions
 
     /// Can the current user add items to this list?
-    func canAddItem(to list: ItemList) -> Bool {
+    func canAddItem(to list: Account) -> Bool {
         // Non-shared lists: always allowed
         guard list.isShared else { return true }
         // Shared lists: anyone with access can add
@@ -47,14 +47,14 @@ final class PermissionManager {
     }
 
     /// Can the current user edit this item?
-    func canEdit(item: ListItem, in list: ItemList) -> Bool {
+    func canEdit(item: Transaction, in list: Account) -> Bool {
         guard canAddItem(to: list) else { return false }
         // In shared lists, any member with write access can edit
         return true
     }
 
     /// Can the current user delete this item?
-    func canDelete(item: ListItem, in list: ItemList) -> Bool {
+    func canDelete(item: Transaction, in list: Account) -> Bool {
         guard canAddItem(to: list) else { return false }
         guard list.isShared else { return true }
 
@@ -69,28 +69,28 @@ final class PermissionManager {
     // MARK: - List Permissions
 
     /// Can the current user edit list metadata (name, color, icon)?
-    func canEditListMetadata(_ list: ItemList) -> Bool {
+    func canEditListMetadata(_ list: Account) -> Bool {
         userIdentity.isCurrentUserOwner(of: list)
     }
 
     /// Can the current user delete this list?
-    func canDeleteList(_ list: ItemList) -> Bool {
+    func canDeleteList(_ list: Account) -> Bool {
         userIdentity.isCurrentUserOwner(of: list)
     }
 
     /// Can the current user manage sharing (add/remove members, stop sharing)?
-    func canManageSharing(for list: ItemList) -> Bool {
+    func canManageSharing(for list: Account) -> Bool {
         userIdentity.isCurrentUserOwner(of: list)
     }
 
     /// Can the current user leave this shared list?
-    func canLeaveList(_ list: ItemList) -> Bool {
+    func canLeaveList(_ list: Account) -> Bool {
         guard list.isShared else { return false }
         return !userIdentity.isCurrentUserOwner(of: list)
     }
 
     /// Can the current user initiate sharing for this list?
-    func canShareList(_ list: ItemList) -> Bool {
+    func canShareList(_ list: Account) -> Bool {
         guard !list.isShared else { return false }
         guard userIdentity.isCurrentUserOwner(of: list) else { return false }
         guard userIdentity.isCloudKitAvailable else { return false }
