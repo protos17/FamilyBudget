@@ -11,9 +11,9 @@ struct SummaryHeaderView: View {
     let income: Decimal
     let expense: Decimal
     let currencyCode: String
-
+    
     private var balance: Decimal { income - expense }
-
+    
     var body: some View {
         HStack(spacing: 0) {
             summaryColumn(title: "Доход", value: income, color: .green)
@@ -26,8 +26,8 @@ struct SummaryHeaderView: View {
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal)
     }
-
-    private func summaryColumn(title: String, value: Decimal, color: Color) -> some View {
+    
+    private func summaryColumn(title: LocalizedStringKey, value: Decimal, color: Color) -> some View {
         VStack(spacing: 4) {
             Text(title)
                 .font(.caption)

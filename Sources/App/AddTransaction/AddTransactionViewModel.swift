@@ -14,7 +14,7 @@ final class AddTransactionViewModel: ObservableObject {
     let editingTransaction: Transaction?
     let onSaveNew: (Transaction) -> Void
     let onSaveEdit: () -> Void
-
+    
     @Published var type: TransactionType
     @Published var title: String
     @Published var amountText: String
@@ -24,9 +24,9 @@ final class AddTransactionViewModel: ObservableObject {
     @Published var paymentMethod: PaymentMethod
     @Published var showingValidationError = false
     @Published var showingCreateCategory = false
-
+    
     var isEditing: Bool { editingTransaction != nil }
-
+    
     init(
         account: Account,
         prefilledType: TransactionType,
@@ -38,7 +38,7 @@ final class AddTransactionViewModel: ObservableObject {
         self.editingTransaction = editingTransaction
         self.onSaveNew = onSaveNew
         self.onSaveEdit = onSaveEdit
-
+        
         if let existing = editingTransaction {
             self.type = existing.type
             self.title = existing.title
@@ -57,29 +57,29 @@ final class AddTransactionViewModel: ObservableObject {
             self.paymentMethod = .card
         }
     }
-
+    
     var categories: [Category] {
         (account.categories ?? []).filter {
             $0.kind == .universal || $0.kind.matches(type)
         }
     }
-
+    
     var canSave: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty && parsedAmount != nil
     }
-
+    
     private var parsedAmount: Int? {
         let normalized = amountText.replacingOccurrences(of: ",", with: ".")
         guard let decimal = Decimal(string: normalized), decimal > 0 else { return nil }
         return Int(truncating: (decimal * 100) as NSDecimalNumber)
     }
-
+    
     func save() -> Bool {
         guard let amountMinorUnits = parsedAmount else {
             showingValidationError = true
             return false
         }
-
+        
         if let existing = editingTransaction {
             existing.title = title.trimmingCharacters(in: .whitespaces)
             existing.amountMinorUnits = amountMinorUnits

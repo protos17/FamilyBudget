@@ -23,17 +23,23 @@ import UserNotifications
 // MARK: - App
 
 @main
-struct FamilyBudgetApp: App {
-    @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
+struct YourApp: App {
+    @AppStorage("appLanguage") private var appLanguageRaw = AppLanguage.system.rawValue
     @AppStorage("appAppearance") private var appAppearance = "system"
-
+    
     var body: some Scene {
         WindowGroup {
-            ListsView()
+            RootTabView()
                 .overlay(CloudKitShareHandler())
                 .preferredColorScheme(colorScheme)
+                .environment(\.locale, selectedLocale)
         }
         .modelContainer(DataManager.shared.container)
+    }
+    
+    private var selectedLocale: Locale {
+        let language = AppLanguage(rawValue: appLanguageRaw) ?? .system
+        return language.locale ?? Locale.autoupdatingCurrent
     }
     
     private var colorScheme: ColorScheme? {
@@ -52,11 +58,11 @@ struct FamilyBudgetApp: App {
 class CloudKitShareCoordinator: ObservableObject {
     static let shared = CloudKitShareCoordinator()
     @Published var pendingShareMetadata: CKShare.Metadata?
-
+    
     func handleShareMetadata(_ metadata: CKShare.Metadata) {
         pendingShareMetadata = metadata
     }
-
+    
     func clearPendingShare() {
         pendingShareMetadata = nil
     }
@@ -71,16 +77,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
     ) -> Bool {
         // Register for silent push notifications (CloudKit sync)
         application.registerForRemoteNotifications()
-
+        
         // Register CloudKit subscriptions for real-time item sync
         Task { @MainActor in
             await UserIdentityService.shared.ensureIdentityResolved()
             await SharingManager.shared.registerSubscriptions()
         }
-
+        
         return true
     }
-
+    
     func application(
         _ application: UIApplication,
         configurationForConnecting connectingSceneSession: UISceneSession,
@@ -90,7 +96,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         config.delegateClass = SceneDelegate.self
         return config
     }
-
+    
     /// Handle CloudKit silent push notifications — triggers item sync
     func application(
         _ application: UIApplication,
@@ -119,7 +125,7 @@ class SceneDelegate: NSObject, UIWindowSceneDelegate {
     ) {
         CloudKitShareCoordinator.shared.handleShareMetadata(metadata)
     }
-
+    
     /// Called when the app is launched via a CloudKit share link
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         if let metadata = connectionOptions.cloudKitShareMetadata {
@@ -136,7 +142,7 @@ private struct CloudKitShareHandler: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showingAccepted = false
     @State private var acceptedListName = ""
-
+    
     var body: some View {
         Color.clear
             .frame(width: 0, height: 0)

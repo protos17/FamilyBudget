@@ -8,19 +8,17 @@
 import SwiftUI
 
 struct RootTabView: View {
-    let account: Account
-
     var body: some View {
         TabView {
             NavigationStack {
-                ListDetailView(list: account)
+                ListsView()
             }
             .tabItem {
-                Label("Бюджет", systemImage: "creditcard.fill")
+                Label("Бюджеты", systemImage: "creditcard.fill")
             }
-
+            
             NavigationStack {
-                SettingsView(account: account)
+                SettingsView()
             }
             .tabItem {
                 Label("Настройки", systemImage: "gearshape.fill")

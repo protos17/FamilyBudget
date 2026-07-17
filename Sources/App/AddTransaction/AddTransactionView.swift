@@ -11,7 +11,7 @@ struct AddTransactionView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: AddTransactionViewModel
     @FocusState private var amountFieldFocused: Bool
-
+    
     init(
         account: Account,
         prefilledType: TransactionType,
@@ -29,7 +29,7 @@ struct AddTransactionView: View {
             )
         )
     }
-
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -41,7 +41,7 @@ struct AddTransactionView: View {
                     .pickerStyle(.segmented)
                     .disabled(viewModel.isEditing)
                 }
-
+                
                 Section {
                     HStack {
                         Text(viewModel.account.currencyCode)
@@ -55,10 +55,10 @@ struct AddTransactionView: View {
                 } header: {
                     Text("Сумма")
                 }
-
+                
                 Section {
                     TextField("Название", text: $viewModel.title)
-
+                    
                     Picker("Категория", selection: $viewModel.selectedCategory) {
                         Text("Без категории").tag(Category?.none)
                         ForEach(viewModel.categories) { category in
@@ -70,15 +70,15 @@ struct AddTransactionView: View {
                             .tag(Category?.some(category))
                         }
                     }
-
+                    
                     Button {
                         viewModel.showingCreateCategory = true
                     } label: {
                         Label("Новая категория", systemImage: "plus.circle")
                     }
-
+                    
                     DatePicker("Дата", selection: $viewModel.date, displayedComponents: [.date, .hourAndMinute])
-
+                    
                     Picker("Способ оплаты", selection: $viewModel.paymentMethod) {
                         Text("Карта").tag(PaymentMethod.card)
                         Text("Наличные").tag(PaymentMethod.cash)
@@ -86,7 +86,7 @@ struct AddTransactionView: View {
                         Text("Другое").tag(PaymentMethod.other)
                     }
                 }
-
+                
                 Section {
                     TextField("Заметка (необязательно)", text: $viewModel.note, axis: .vertical)
                         .lineLimit(2...4)
@@ -94,8 +94,8 @@ struct AddTransactionView: View {
             }
             .navigationTitle(
                 viewModel.isEditing
-                    ? "Редактировать"
-                    : (viewModel.type == .income ? "Новый доход" : "Новый расход")
+                ? "Редактировать"
+                : (viewModel.type == .income ? "Новый доход" : "Новый расход")
             )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

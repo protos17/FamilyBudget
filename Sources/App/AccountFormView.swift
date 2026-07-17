@@ -11,23 +11,23 @@ import SwiftData
 struct AccountFormView: View {
     let editingAccount: Account?
     let onSave: (Account) -> Void
-
+    
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-
+    
     @State private var name: String
     @State private var icon: String
     @State private var colorHex: String
     @State private var currencyCode: String
     @State private var showingSymbolPicker = false
-
+    
     private let icons = [
         "creditcard.fill", "house.fill", "car.fill", "airplane",
         "banknote.fill", "cart.fill", "gift.fill", "briefcase.fill",
         "building.columns.fill", "heart.fill", "graduationcap.fill", "wallet.pass.fill",
         "star.fill", "leaf.fill", "pawprint.fill", "figure.2.and.child.holdinghands"
     ]
-
+    
     init(editingAccount: Account? = nil, onSave: @escaping (Account) -> Void) {
         self.editingAccount = editingAccount
         self.onSave = onSave
@@ -36,7 +36,7 @@ struct AccountFormView: View {
         _colorHex = State(initialValue: editingAccount?.colorHex ?? ColorPalette.all[0])
         _currencyCode = State(initialValue: editingAccount?.currencyCode ?? "RUB")
     }
-
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -57,10 +57,12 @@ struct AccountFormView: View {
                     }
                     .padding(.vertical, 8)
                     .listRowBackground(Color.clear)
-
+                }
+                
+                Section {
                     TextField("Название бюджета", text: $name)
                 }
-
+                
                 Section("Иконка") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 14) {
                         ForEach(icons, id: \.self) { symbol in
@@ -69,8 +71,8 @@ struct AccountFormView: View {
                                 .frame(width: 40, height: 40)
                                 .background(
                                     icon == symbol
-                                        ? Color(hex: colorHex).opacity(0.2)
-                                        : Color(.tertiarySystemFill),
+                                    ? Color(hex: colorHex).opacity(0.2)
+                                    : Color(.tertiarySystemFill),
                                     in: Circle()
                                 )
                                 .foregroundStyle(icon == symbol ? Color(hex: colorHex) : .primary)
@@ -79,7 +81,7 @@ struct AccountFormView: View {
                     }
                     .padding(.vertical, 4)
                 }
-
+                
                 Section("Цвет") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 14) {
                         ForEach(ColorPalette.all, id: \.self) { hex in
@@ -96,7 +98,7 @@ struct AccountFormView: View {
                     }
                     .padding(.vertical, 4)
                 }
-
+                
                 Section("Валюта") {
                     Picker("Валюта", selection: $currencyCode) {
                         Text("₽ Рубль").tag("RUB")
@@ -125,7 +127,7 @@ struct AccountFormView: View {
             }
         }
     }
-
+    
     private func save() {
         if let existing = editingAccount {
             existing.name = name.trimmingCharacters(in: .whitespaces)

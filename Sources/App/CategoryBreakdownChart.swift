@@ -20,11 +20,11 @@ struct CategoryBreakdownSlice: Identifiable {
 struct CategoryBreakdownChart: View {
     let slices: [CategoryBreakdownSlice]
     @State private var showingAll = false
-
+    
     private var visibleSlices: [CategoryBreakdownSlice] {
         showingAll ? slices : Array(slices.prefix(5))
     }
-
+    
     var body: some View {
         if slices.isEmpty {
             ContentUnavailableView(
@@ -38,7 +38,7 @@ struct CategoryBreakdownChart: View {
                 Text("Расходы по категориям")
                     .font(.headline)
                     .padding(.horizontal)
-
+                
                 Chart(slices) { slice in
                     SectorMark(
                         angle: .value("Сумма", slice.amount),
@@ -57,7 +57,7 @@ struct CategoryBreakdownChart: View {
                 }
                 .frame(height: 220)
                 .padding(.horizontal)
-
+                
                 VStack(spacing: 10) {
                     ForEach(visibleSlices) { slice in
                         HStack(spacing: 8) {
@@ -72,7 +72,7 @@ struct CategoryBreakdownChart: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-
+                    
                     if slices.count > 5 {
                         Button {
                             withAnimation(.snappy) { showingAll.toggle() }

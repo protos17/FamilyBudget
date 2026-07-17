@@ -13,10 +13,14 @@ struct ListsView: View {
     @Query(sort: \Account.sortOrder) private var lists: [Account]
     @State private var showingAddList = false
     @State private var sharingEndedName: String?
+    @State private var accountPendingDeletion: Account?
+    @State private var showingDeletionError = false
+    @State private var deletionErrorMessage = ""
+    @State private var accountPendingLeave: Account?
     private let sharingHealthTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
-
+    
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
-
+    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -25,15 +29,29 @@ struct ListsView: View {
                         .padding(.horizontal)
                         .padding(.top, 8)
                 }
-
+                
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(lists) { list in
-                        NavigationLink(destination: RootTabView(account: list)) {
+                        NavigationLink(destination: ListDetailView(list: list)) {
                             BudgetCard(list: list)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            if PermissionManager.shared.canDeleteList(list) {
+                                Button(role: .destructive) {
+                                    accountPendingDeletion = list
+                                } label: {
+                                    Label("Удалить бюджет", systemImage: "trash")
+                                }
+                            } else if PermissionManager.shared.canLeaveList(list) {
+                                Button(role: .destructive) {
+                                    accountPendingLeave = list
+                                } label: {
+                                    Label("Покинуть бюджет", systemImage: "rectangle.portrait.and.arrow.right")
+                                }
+                            }
+                        }
                     }
-
                     addBudgetCard
                 }
                 .padding(.horizontal)
@@ -66,6 +84,50 @@ struct ListsView: View {
                     )
                 }
             }
+            .confirmationDialog(
+                "Удалить \"\(accountPendingDeletion?.name ?? "")\"?",
+                isPresented: Binding(
+                    get: { accountPendingDeletion != nil },
+                    set: { if !$0 { accountPendingDeletion = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Удалить", role: .destructive) {
+                    if let account = accountPendingDeletion {
+                        deleteAccount(account)
+                    }
+                    accountPendingDeletion = nil
+                }
+                Button("Отмена", role: .cancel) {
+                    accountPendingDeletion = nil
+                }
+            } message: {
+                if let account = accountPendingDeletion, account.isShared {
+                    Text("Этот бюджет расшарен. Удаление прекратит доступ для всех участников. Все операции и категории будут удалены безвозвратно.")
+                } else {
+                    Text("Все операции и категории этого бюджета будут удалены безвозвратно.")
+                }
+            }
+            .confirmationDialog(
+                "Покинуть \"\(accountPendingLeave?.name ?? "")\"?",
+                isPresented: Binding(
+                    get: { accountPendingLeave != nil },
+                    set: { if !$0 { accountPendingLeave = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Покинуть", role: .destructive) {
+                    if let account = accountPendingLeave {
+                        leaveAccount(account)
+                    }
+                    accountPendingLeave = nil
+                }
+                Button("Отмена", role: .cancel) {
+                    accountPendingLeave = nil
+                }
+            } message: {
+                Text("Вы потеряете доступ к этому бюджету. Добавленные вами операции останутся у других участников.")
+            }
             .onReceive(NotificationCenter.default.publisher(for: SharingManager.sharingEndedNotification)) { notification in
                 if let name = notification.userInfo?["listName"] as? String {
                     sharingEndedName = name
@@ -87,9 +149,14 @@ struct ListsView: View {
                     Text("\"\(name)\" больше не доступен как общий. Локальная копия сохранена.")
                 }
             }
+            .alert("Ошибка", isPresented: $showingDeletionError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(deletionErrorMessage)
+            }
         }
     }
-
+    
     private var addBudgetCard: some View {
         Button {
             showingAddList = true
@@ -111,7 +178,7 @@ struct ListsView: View {
         }
         .buttonStyle(.plain)
     }
-
+    
     private var iCloudBanner: some View {
         HStack(spacing: 10) {
             Image(systemName: "icloud.slash")
@@ -129,7 +196,31 @@ struct ListsView: View {
         .padding(12)
         .background(Color(.systemOrange).opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
     }
-
+    
+    private func deleteAccount(_ account: Account) {
+        if account.isShared {
+            Task {
+                do {
+                    try await SharingManager.shared.stopSharing(account, context: modelContext)
+                    modelContext.delete(account)
+                    try? modelContext.save()
+                } catch {
+                    deletionErrorMessage = "Не удалось удалить бюджет: \(error.localizedDescription)"
+                    showingDeletionError = true
+                }
+            }
+        } else {
+            modelContext.delete(account)
+            try? modelContext.save()
+        }
+    }
+    
+    private func leaveAccount(_ account: Account) {
+        Task {
+            try? await SharingManager.shared.leaveSharedList(account, context: modelContext)
+        }
+    }
+    
     private func checkForEndedSharing() async {
         let sharedLists = lists.filter(\.isShared)
         guard !sharedLists.isEmpty else { return }
@@ -141,19 +232,19 @@ struct ListsView: View {
 
 private struct BudgetCard: View {
     let list: Account
-
+    
     private var currentMonthTransactions: [Transaction] {
         (list.transactions ?? []).filter {
             Calendar.current.isDate($0.date, equalTo: .now, toGranularity: .month)
         }
     }
-
+    
     private var balance: Decimal {
         let income = currentMonthTransactions.filter { $0.type == .income }.reduce(Decimal(0)) { $0 + $1.amount }
         let expense = currentMonthTransactions.filter { $0.type == .expense }.reduce(Decimal(0)) { $0 + $1.amount }
         return income - expense
     }
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -163,28 +254,28 @@ private struct BudgetCard: View {
                     .frame(width: 44, height: 44)
                     .background(Color(hex: list.colorHex))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
+                
                 Spacer()
-
+                
                 if list.isShared {
                     Image(systemName: "person.2.fill")
                         .font(.caption)
                         .foregroundStyle(.blue)
                 }
             }
-
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(list.name)
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-
+                
                 Text("\(balance.formattedAsCurrency(code: list.currencyCode)) в этом месяце")
                     .font(.caption)
                     .foregroundStyle(balance >= 0 ? Color.secondary : Color.red)
                     .lineLimit(1)
             }
-
+            
             Spacer(minLength: 0)
         }
         .padding(14)

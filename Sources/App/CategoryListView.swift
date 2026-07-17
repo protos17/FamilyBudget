@@ -12,7 +12,7 @@ struct CategoryListView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var editingCategory: Category?
     @State private var showingCreate = false
-
+    
     var body: some View {
         List {
             ForEach(account.categories ?? []) { category in
@@ -55,7 +55,7 @@ struct CategoryListView: View {
             )
         }
     }
-
+    
     private func deleteCategory(_ category: Category) {
         modelContext.delete(category)
         try? modelContext.save()

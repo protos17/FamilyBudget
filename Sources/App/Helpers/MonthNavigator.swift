@@ -9,14 +9,15 @@ import SwiftUI
 
 struct MonthNavigator: View {
     @Binding var selectedMonth: Date
-
+    @Environment(\.locale) private var locale
+    
     private var monthTitle: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "LLLL yyyy"
-        formatter.locale = Locale(identifier: "ru_RU")
+        formatter.locale = locale
         return formatter.string(from: selectedMonth).capitalized
     }
-
+    
     var body: some View {
         HStack {
             Button {
@@ -27,14 +28,14 @@ struct MonthNavigator: View {
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
-
+            
             Spacer()
-
+            
             Text(monthTitle)
                 .font(.headline)
-
+            
             Spacer()
-
+            
             Button {
                 shiftMonth(by: 1)
             } label: {
@@ -48,11 +49,11 @@ struct MonthNavigator: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
     }
-
+    
     private var isCurrentMonth: Bool {
         Calendar.current.isDate(selectedMonth, equalTo: .now, toGranularity: .month)
     }
-
+    
     private func shiftMonth(by value: Int) {
         guard let newDate = Calendar.current.date(byAdding: .month, value: value, to: selectedMonth) else { return }
         selectedMonth = newDate

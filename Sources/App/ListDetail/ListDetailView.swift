@@ -14,11 +14,11 @@ struct ListDetailView: View {
     let list: Account
     @Environment(\.modelContext) private var modelContext
     @Query private var allItems: [Transaction]
-
+    
     @StateObject private var viewModel: ListDetailViewModel
-
+    
     private var permissions: PermissionManager { .shared }
-
+    
     init(list: Account) {
         self.list = list
         let listID = list.id
@@ -29,19 +29,19 @@ struct ListDetailView: View {
         )
         _viewModel = StateObject(wrappedValue: ListDetailViewModel(list: list))
     }
-
+    
     private var filteredItems: [Transaction] {
         viewModel.filteredItems(from: allItems)
     }
-
+    
     private var summary: (income: Decimal, expense: Decimal) {
         viewModel.summary(for: filteredItems)
     }
-
+    
     private var breakdownSlices: [CategoryBreakdownSlice] {
         viewModel.breakdownSlices(for: filteredItems)
     }
-
+    
     var body: some View {
         List {
             if list.isShared {
@@ -49,11 +49,11 @@ struct ListDetailView: View {
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
             }
-
+            
             MonthNavigator(selectedMonth: $viewModel.selectedMonth)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
-
+            
             SummaryHeaderView(
                 income: summary.income,
                 expense: summary.expense,
@@ -61,15 +61,15 @@ struct ListDetailView: View {
             )
             .nativeCard()
             .padding(.horizontal)
-
+            
             CategoryBreakdownChart(slices: breakdownSlices)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 12, trailing: 0))
-
+            
             filterBar
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
-
+            
             if filteredItems.isEmpty {
                 ContentUnavailableView(
                     "Нет операций",
@@ -109,7 +109,20 @@ struct ListDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                shareButton
+                HStack(spacing: 16) {
+                    shareButton
+                    Button {
+                        viewModel.showingBudgetSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                }
+            }
+        }
+        .toolbar(.hidden, for: .tabBar)
+        .sheet(isPresented: $viewModel.showingBudgetSettings) {
+            NavigationStack {
+                BudgetSettingsView(account: list)
             }
         }
         .sheet(isPresented: $viewModel.showingShareSheet) {
@@ -142,6 +155,11 @@ struct ListDetailView: View {
                 kind: CategoryKind(matching: viewModel.categoryCreationKind),
                 onSave: { _ in }
             )
+        }
+        .sheet(isPresented: $viewModel.showingShareInvite) {
+            NavigationStack {
+                ShareInviteView(account: list, viewModel: viewModel)
+            }
         }
         .alert("Ошибка", isPresented: $viewModel.showingError) {
             Button("OK", role: .cancel) {}
@@ -180,9 +198,9 @@ struct ListDetailView: View {
             Text("Вы потеряете доступ к этому списку. Добавленные вами операции останутся у других участников.")
         }
     }
-
+    
     // MARK: - Sharing Banner
-
+    
     private var sharingBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "person.2.fill")
@@ -199,10 +217,11 @@ struct ListDetailView: View {
         .padding(12)
         .background(Color(.systemBlue).opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal)
+        .frame(height: 44)
     }
-
+    
     // MARK: - Filter bar
-
+    
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -216,12 +235,12 @@ struct ListDetailView: View {
                         .shadow(color: Color.red.opacity(0.35), radius: 8, x: 0, y: 4)
                 } label: {
                     filterChip(
-                        title: viewModel.selectedType.map { $0 == .income ? "Доход" : "Расход" } ?? "Тип",
+                        label: viewModel.selectedType.map { $0 == .income ? Text("Доход") : Text("Расход") } ?? Text("Тип"),
                         isActive: viewModel.selectedType != nil
                     )
                 }
                 .buttonStyle(.plain)
-
+                
                 Menu {
                     Button("Все категории") { viewModel.selectedCategory = nil }
                     ForEach(list.categories ?? []) { category in
@@ -231,7 +250,7 @@ struct ListDetailView: View {
                     }
                 } label: {
                     filterChip(
-                        title: viewModel.selectedCategory.map { $0.name } ?? "Категория",
+                        label: viewModel.selectedCategory.map { Text($0.name) } ?? Text("Категория"),
                         isActive: viewModel.selectedCategory != nil
                     )
                 }
@@ -240,9 +259,9 @@ struct ListDetailView: View {
             .padding(.horizontal)
         }
     }
-
-    private func filterChip(title: String, isActive: Bool) -> some View {
-        Text(title)
+    
+    private func filterChip(label: Text, isActive: Bool) -> some View {
+        label
             .font(.subheadline)
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
@@ -254,45 +273,21 @@ struct ListDetailView: View {
                 in: Capsule()
             )
             .foregroundStyle(isActive ? Color.accentColor : .primary)
-            .animation(nil, value: title)
     }
-
-
+    
+    
     // MARK: - Share Button
-
+    
     private var shareButton: some View {
-        Menu {
-            if !list.isShared && permissions.canShareList(list) {
-                Button {
-                    viewModel.presentSharing()
-                } label: {
-                    Label("Поделиться списком", systemImage: "person.badge.plus")
-                }
-            }
-
-            if list.isShared && permissions.canManageSharing(for: list) {
-                Button {
-                    viewModel.presentSharing()
-                } label: {
-                    Label("Управление доступом", systemImage: "person.2.fill")
-                }
-            }
-
-            if permissions.canLeaveList(list) {
-                Button(role: .destructive) {
-                    viewModel.showingLeaveConfirmation = true
-                } label: {
-                    Label("Покинуть список", systemImage: "rectangle.portrait.and.arrow.right")
-                }
-            }
+        Button {
+            viewModel.showingShareInvite = true
         } label: {
             Image(systemName: list.isShared ? "person.2.fill" : "person.badge.plus")
         }
-        .buttonStyle(.plain)
     }
-
+    
     // MARK: - Quick Action Buttons
-
+    
     private var quickActionButtons: some View {
         HStack(spacing: 12) {
             Button {
@@ -308,7 +303,7 @@ struct ListDetailView: View {
                 .padding(.vertical, 14)
                 .background(Color.green, in: RoundedRectangle(cornerRadius: 14))
             }
-
+            
             Button {
                 viewModel.presentAddTransaction(type: .expense)
             } label: {
@@ -334,29 +329,29 @@ struct ListDetailView: View {
 private struct ItemCard: View {
     let item: Transaction
     let list: Account
-
+    
     private var tintColor: Color {
         if let hex = item.category?.colorHex {
             return Color(hex: hex)
         }
         return item.type == .income ? .green : .red
     }
-
+    
     private var symbolName: String {
         item.category?.icon ?? (item.type == .income ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
     }
-
+    
     private var amountString: String {
         let sign = item.type == .income ? "+" : "−"
         return "\(sign)\(item.amount.formattedAsCurrency(code: list.currencyCode))"
     }
-
+    
     private var authorName: String {
         item.createdByUserID == UserIdentityService.shared.currentUserID
-            ? "Вы"
-            : (item.createdByDisplayName ?? "Участник")
+        ? "Вы"
+        : (item.createdByDisplayName ?? "Участник")
     }
-
+    
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: symbolName)
@@ -364,12 +359,12 @@ private struct ItemCard: View {
                 .foregroundStyle(tintColor)
                 .frame(width: 40, height: 40)
                 .background(tintColor.opacity(0.15), in: Circle())
-
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
                     .font(.body.weight(.medium))
                     .foregroundStyle(.primary)
-
+                
                 HStack(spacing: 6) {
                     if let category = item.category {
                         Text(category.name)
@@ -380,9 +375,9 @@ private struct ItemCard: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
-
+            
             Spacer(minLength: 0)
-
+            
             Text(amountString)
                 .font(.headline)
                 .foregroundStyle(tintColor)
@@ -402,7 +397,7 @@ extension CategoryKind {
             return false
         }
     }
-
+    
     init(matching type: TransactionType) {
         self = type == .income ? .income : .expense
     }

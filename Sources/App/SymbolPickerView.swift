@@ -10,7 +10,7 @@ import SwiftUI
 struct SymbolPickerView: View {
     @Binding var selectedSymbol: String
     @Environment(\.dismiss) private var dismiss
-
+    
     private let symbols = [
         "cart.fill", "fork.knife", "car.fill", "house.fill",
         "cross.case.fill", "gamecontroller.fill", "tshirt.fill", "airplane",
@@ -22,7 +22,7 @@ struct SymbolPickerView: View {
         "heart.fill", "figure.walk", "wrench.fill", "paintbrush.fill"
     ]
     private let columns = Array(repeating: GridItem(.flexible()), count: 5)
-
+    
     var body: some View {
         NavigationStack {
             ScrollView {

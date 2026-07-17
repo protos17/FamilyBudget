@@ -13,7 +13,7 @@ import Combine
 @MainActor
 final class ListDetailViewModel: ObservableObject {
     let list: Account
-
+    
     // Sharing state
     @Published var showingShareSheet = false
     @Published var activeShare: CKShare?
@@ -22,39 +22,41 @@ final class ListDetailViewModel: ObservableObject {
     @Published var errorMessage = ""
     @Published var showingLeaveConfirmation = false
     @Published var isSyncing = false
-
+    
     // Add / edit transaction
     @Published var showingAddTransaction = false
     @Published var prefilledType: TransactionType = .expense
     @Published var editingTransaction: Transaction?
-
+    
     // Month + filters
     @Published var selectedMonth: Date = Calendar.current.startOfMonth(for: .now)
     @Published var selectedCategory: Category?
     @Published var selectedType: TransactionType?
-
+    
     // Category creation
     @Published var showingCreateCategory = false
     @Published var categoryCreationKind: TransactionType = .expense
-
+    @Published var showingBudgetSettings = false
+    @Published var showingShareInvite = false
+    
     private var modelContext: ModelContext?
-
+    
     init(list: Account) {
         self.list = list
     }
-
+    
     func attach(context: ModelContext) {
         self.modelContext = context
     }
-
-    var bannerText: String {
+    
+    var bannerText: LocalizedStringKey {
         UserIdentityService.shared.isCurrentUserOwner(of: list)
-            ? "Вы делитесь этим списком"
-            : "Доступно вам по приглашению"
+        ? "Вы делитесь этим бюджетом"
+        : "Доступно вам по приглашению"
     }
-
+    
     // MARK: - Фильтрация по месяцу + фильтрам
-
+    
     func filteredItems(from allItems: [Transaction]) -> [Transaction] {
         let calendar = Calendar.current
         return allItems.filter { item in
@@ -70,21 +72,21 @@ final class ListDetailViewModel: ObservableObject {
             return true
         }
     }
-
+    
     func summary(for items: [Transaction]) -> (income: Decimal, expense: Decimal) {
         let income = items.filter { $0.type == .income }.reduce(Decimal(0)) { $0 + $1.amount }
         let expense = items.filter { $0.type == .expense }.reduce(Decimal(0)) { $0 + $1.amount }
         return (income, expense)
     }
-
+    
     func breakdownSlices(for items: [Transaction]) -> [CategoryBreakdownSlice] {
         let expenses = items.filter { $0.type == .expense }
         let total = expenses.reduce(Decimal(0)) { $0 + $1.amount }
         guard total > 0 else { return [] }
-
+        
         let totalDouble = (total as NSDecimalNumber).doubleValue
         let grouped = Dictionary(grouping: expenses) { $0.category?.id }
-
+        
         return grouped.compactMap { _, transactions -> CategoryBreakdownSlice? in
             guard let category = transactions.first?.category else { return nil }
             let sum = transactions.reduce(Decimal(0)) { $0 + $1.amount }
@@ -99,33 +101,33 @@ final class ListDetailViewModel: ObservableObject {
         }
         .sorted { $0.amount > $1.amount }
     }
-
+    
     // MARK: - Actions
-
+    
     func presentAddTransaction(type: TransactionType) {
         editingTransaction = nil
         prefilledType = type
         showingAddTransaction = true
     }
-
+    
     func presentEditTransaction(_ item: Transaction) {
         editingTransaction = item
         prefilledType = item.type
         showingAddTransaction = true
     }
-
+    
     func presentCreateCategory(kind: TransactionType) {
         categoryCreationKind = kind
         showingCreateCategory = true
     }
-
+    
     func presentSharing() {
         guard SharingManager.shared.isSharingAvailable else {
             errorMessage = "iCloud недоступен. Войдите в iCloud в настройках."
             showingError = true
             return
         }
-
+        
         Task {
             guard let context = modelContext else { return }
             do {
@@ -141,50 +143,50 @@ final class ListDetailViewModel: ObservableObject {
             }
         }
     }
-
+    
     func saveNewItem(_ item: Transaction) {
         guard let context = modelContext else { return }
         item.account = list
         context.insert(item)
         try? context.save()
-
+        
         if list.isShared {
             Task {
                 try? await SharingManager.shared.pushItem(item, for: list)
             }
         }
     }
-
+    
     func saveEditedItem() {
         guard let context = modelContext else { return }
         try? context.save()
-
+        
         if list.isShared, let item = editingTransaction {
             Task {
                 try? await SharingManager.shared.pushItem(item, for: list)
             }
         }
     }
-
+    
     func deleteItem(_ item: Transaction) {
         guard let context = modelContext else { return }
         context.delete(item)
         try? context.save()
-
+        
         if list.isShared {
             Task {
                 try? await SharingManager.shared.removeItem(item, for: list)
             }
         }
     }
-
+    
     func leaveList() {
         guard let context = modelContext else { return }
         Task {
             try? await SharingManager.shared.leaveSharedList(list, context: context)
         }
     }
-
+    
     func syncSharedItems() async {
         guard list.isShared, !isSyncing, let context = modelContext else { return }
         isSyncing = true

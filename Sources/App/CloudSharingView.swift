@@ -22,7 +22,7 @@ struct CloudSharingView: UIViewControllerRepresentable {
     let context: ModelContext
     let container: CKContainer
     let share: CKShare
-
+    
     func makeUIViewController(context: Context) -> UICloudSharingController {
         let controller = UICloudSharingController(share: share, container: container)
         controller.delegate = context.coordinator
@@ -33,43 +33,43 @@ struct CloudSharingView: UIViewControllerRepresentable {
         controller.modalPresentationStyle = .formSheet
         return controller
     }
-
+    
     func updateUIViewController(_ uiViewController: UICloudSharingController, context: Context) {}
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
-
+    
     class Coordinator: NSObject, UICloudSharingControllerDelegate {
         let parent: CloudSharingView
-
+        
         init(_ parent: CloudSharingView) {
             self.parent = parent
         }
-
+        
         func cloudSharingController(
             _ csc: UICloudSharingController,
             failedToSaveShareWithError error: Error
         ) {
             // Error is shown by UICloudSharingController
         }
-
+        
         func itemTitle(for csc: UICloudSharingController) -> String? {
             parent.list.name
         }
-
+        
         func itemThumbnailData(for csc: UICloudSharingController) -> Data? {
             // Generate a thumbnail with the list's icon and color
             let size = CGSize(width: 120, height: 120)
             let color = UIColor(Color(hex: parent.list.colorHex))
-
+            
             let renderer = UIGraphicsImageRenderer(size: size)
             let image = renderer.image { ctx in
                 let rect = CGRect(origin: .zero, size: size)
                 UIBezierPath(roundedRect: rect, cornerRadius: 24).addClip()
                 color.setFill()
                 ctx.fill(rect)
-
+                
                 let config = UIImage.SymbolConfiguration(pointSize: 48, weight: .medium)
                 if let symbol = UIImage(systemName: parent.list.icon, withConfiguration: config) {
                     let tinted = symbol.withTintColor(.white, renderingMode: .alwaysOriginal)
@@ -82,7 +82,7 @@ struct CloudSharingView: UIViewControllerRepresentable {
             }
             return image.pngData()
         }
-
+        
         func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
             Task { @MainActor in
                 do {
@@ -92,7 +92,7 @@ struct CloudSharingView: UIViewControllerRepresentable {
                 }
             }
         }
-
+        
         func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {}
     }
 }
