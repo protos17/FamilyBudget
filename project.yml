@@ -1,4 +1,4 @@
-name: FamilyBudget
+name: ShareBudget
 options:
   bundleIdPrefix: ru.protos
   deploymentTarget:
@@ -9,7 +9,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    DEVELOPMENT_TEAM: "G5JZKT7GW8" # Set your team ID here (required for CloudKit)
+    DEVELOPMENT_TEAM: "G5JZKT7GW8"
     CODE_SIGN_STYLE: Automatic
 
 targets:
@@ -17,7 +17,7 @@ targets:
   # ─────────────────────────────────────────────
   # Main App
   # ─────────────────────────────────────────────
-  CloudKitSharing:
+  ShareBudget:
     type: application
     platform: iOS
     sources:
@@ -26,21 +26,36 @@ targets:
     info:
       path: App/Resources/Info.plist
       properties:
+        ITSAppUsesNonExemptEncryption: false
         UIBackgroundModes:
           - remote-notification
         CKSharingSupported: true
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchLogo
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~iphone:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     entitlements:
       path: App/Resources/App.entitlements
       properties:
         com.apple.developer.icloud-container-identifiers:
-          - iCloud.ru.protos.cloudkitsharing
+          - iCloud.ru.protos.sharebudget
         com.apple.developer.icloud-services:
           - CloudKit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: ru.protos.cloudkitsharing
+        PRODUCT_BUNDLE_IDENTIFIER: ru.protos.sharebudget
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "3"
         GENERATE_INFOPLIST_FILE: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: LaunchBackground
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"

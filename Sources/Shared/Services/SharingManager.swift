@@ -29,7 +29,7 @@ import OSLog
 final class SharingManager {
     static let shared = SharingManager()
 
-    private let logger = Logger(subsystem: "ru.protos.cloudkitsharing", category: "Sharing")
+    private let logger = Logger(subsystem: "ru.protos.sharebudget", category: "Sharing")
 
     /// Notification posted when a shared list becomes unavailable
     static let sharingEndedNotification = Notification.Name("SharingManager.sharingEnded")
@@ -300,8 +300,6 @@ final class SharingManager {
         record["createdByDisplayName"] = (item.createdByDisplayName ?? "") as CKRecordValue
         record["createdAt"] = item.createdAt as CKRecordValue
         record["modifiedAt"] = (item.modifiedAt ?? item.createdAt) as CKRecordValue
-
-        // Новые поля Transaction
         record["amountMinorUnits"] = item.amountMinorUnits as CKRecordValue
         record["type"] = item.type.rawValue as CKRecordValue
         record["date"] = item.date as CKRecordValue

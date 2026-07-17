@@ -24,32 +24,19 @@ enum PaymentMethod: String, Codable {
 @Model
 final class Transaction {
     var id: UUID = UUID()
-    var title: String = ""                      // было text
-    var amountMinorUnits: Int = 0                // сумма в копейках/центах
+    var title: String = ""
+    var amountMinorUnits: Int = 0
     var type: TransactionType = TransactionType.expense
-    var date: Date = Date()                      // дата операции
+    var date: Date = Date()
     var note: String?
     var paymentMethod: PaymentMethod = PaymentMethod.other
     var tags: [String] = []
     var createdAt: Date = Date()
-
-    /// Last time this item was confirmed in CloudKit.
-    /// Used by sync logic to avoid re-uploading items that were deleted remotely.
     var modifiedAt: Date?
-
-    /// CloudKit user record name of the person who created this item.
-    /// Used for permission checks in shared lists.
     var createdByUserID: String?
-
-    /// Кэш имени автора для быстрого отображения в UI без похода в UserIdentityService
     var createdByDisplayName: String?
-
-    /// Parent account
     var account: Account?
-
-    /// Категория операции
     var category: Category?
-
     var amount: Decimal {
         Decimal(amountMinorUnits) / 100
     }

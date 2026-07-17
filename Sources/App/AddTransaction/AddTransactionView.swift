@@ -12,9 +12,21 @@ struct AddTransactionView: View {
     @StateObject private var viewModel: AddTransactionViewModel
     @FocusState private var amountFieldFocused: Bool
 
-    init(account: Account, prefilledType: TransactionType, onSave: @escaping (Transaction) -> Void) {
+    init(
+        account: Account,
+        prefilledType: TransactionType,
+        editingTransaction: Transaction?,
+        onSaveNew: @escaping (Transaction) -> Void,
+        onSaveEdit: @escaping () -> Void
+    ) {
         _viewModel = StateObject(
-            wrappedValue: AddTransactionViewModel(account: account, prefilledType: prefilledType, onSave: onSave)
+            wrappedValue: AddTransactionViewModel(
+                account: account,
+                prefilledType: prefilledType,
+                editingTransaction: editingTransaction,
+                onSaveNew: onSaveNew,
+                onSaveEdit: onSaveEdit
+            )
         )
     }
 
@@ -27,6 +39,7 @@ struct AddTransactionView: View {
                         Text("Расход").tag(TransactionType.expense)
                     }
                     .pickerStyle(.segmented)
+                    .disabled(viewModel.isEditing)
                 }
 
                 Section {
@@ -49,9 +62,19 @@ struct AddTransactionView: View {
                     Picker("Категория", selection: $viewModel.selectedCategory) {
                         Text("Без категории").tag(Category?.none)
                         ForEach(viewModel.categories) { category in
-                            Label(category.name, systemImage: category.icon)
-                                .tag(Category?.some(category))
+                            HStack {
+                                Image(systemName: category.icon)
+                                    .tint(Color(hex: category.colorHex))
+                                Text(category.name)
+                            }
+                            .tag(Category?.some(category))
                         }
+                    }
+
+                    Button {
+                        viewModel.showingCreateCategory = true
+                    } label: {
+                        Label("Новая категория", systemImage: "plus.circle")
                     }
 
                     DatePicker("Дата", selection: $viewModel.date, displayedComponents: [.date, .hourAndMinute])
@@ -69,7 +92,11 @@ struct AddTransactionView: View {
                         .lineLimit(2...4)
                 }
             }
-            .navigationTitle(viewModel.type == .income ? "Новый доход" : "Новый расход")
+            .navigationTitle(
+                viewModel.isEditing
+                    ? "Редактировать"
+                    : (viewModel.type == .income ? "Новый доход" : "Новый расход")
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -88,7 +115,16 @@ struct AddTransactionView: View {
             .alert("Введите корректную сумму", isPresented: $viewModel.showingValidationError) {
                 Button("OK", role: .cancel) {}
             }
-            .onAppear { amountFieldFocused = true }
+            .sheet(isPresented: $viewModel.showingCreateCategory) {
+                CreateCategoryView(
+                    account: viewModel.account,
+                    kind: CategoryKind(matching: viewModel.type),
+                    onSave: { newCategory in
+                        viewModel.selectedCategory = newCategory
+                    }
+                )
+            }
+            .onAppear { amountFieldFocused = !viewModel.isEditing }
         }
     }
 }

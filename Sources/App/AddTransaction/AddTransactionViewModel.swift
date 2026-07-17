@@ -11,21 +11,51 @@ import Combine
 @MainActor
 final class AddTransactionViewModel: ObservableObject {
     let account: Account
-    let onSave: (Transaction) -> Void
+    let editingTransaction: Transaction?
+    let onSaveNew: (Transaction) -> Void
+    let onSaveEdit: () -> Void
 
     @Published var type: TransactionType
-    @Published var title: String = ""
-    @Published var amountText: String = ""
-    @Published var date: Date = .now
+    @Published var title: String
+    @Published var amountText: String
+    @Published var date: Date
     @Published var selectedCategory: Category?
-    @Published var note: String = ""
-    @Published var paymentMethod: PaymentMethod = .card
+    @Published var note: String
+    @Published var paymentMethod: PaymentMethod
     @Published var showingValidationError = false
+    @Published var showingCreateCategory = false
 
-    init(account: Account, prefilledType: TransactionType, onSave: @escaping (Transaction) -> Void) {
+    var isEditing: Bool { editingTransaction != nil }
+
+    init(
+        account: Account,
+        prefilledType: TransactionType,
+        editingTransaction: Transaction?,
+        onSaveNew: @escaping (Transaction) -> Void,
+        onSaveEdit: @escaping () -> Void
+    ) {
         self.account = account
-        self.type = prefilledType
-        self.onSave = onSave
+        self.editingTransaction = editingTransaction
+        self.onSaveNew = onSaveNew
+        self.onSaveEdit = onSaveEdit
+
+        if let existing = editingTransaction {
+            self.type = existing.type
+            self.title = existing.title
+            self.amountText = "\(existing.amount)"
+            self.date = existing.date
+            self.selectedCategory = existing.category
+            self.note = existing.note ?? ""
+            self.paymentMethod = existing.paymentMethod
+        } else {
+            self.type = prefilledType
+            self.title = ""
+            self.amountText = ""
+            self.date = .now
+            self.selectedCategory = nil
+            self.note = ""
+            self.paymentMethod = .card
+        }
     }
 
     var categories: [Category] {
@@ -50,29 +80,29 @@ final class AddTransactionViewModel: ObservableObject {
             return false
         }
 
-        let item = Transaction(
-            title: title.trimmingCharacters(in: .whitespaces),
-            amountMinorUnits: amountMinorUnits,
-            type: type,
-            date: date,
-            createdByUserID: UserIdentityService.shared.currentUserID
-        )
-        item.category = selectedCategory
-        item.paymentMethod = paymentMethod
-        item.note = note.isEmpty ? nil : note
-
-        onSave(item)
-        return true
-    }
-}
-
-extension CategoryKind {
-    func matches(_ type: TransactionType) -> Bool {
-        switch (self, type) {
-        case (.income, .income), (.expense, .expense):
-            return true
-        default:
-            return false
+        if let existing = editingTransaction {
+            existing.title = title.trimmingCharacters(in: .whitespaces)
+            existing.amountMinorUnits = amountMinorUnits
+            existing.type = type
+            existing.date = date
+            existing.category = selectedCategory
+            existing.paymentMethod = paymentMethod
+            existing.note = note.isEmpty ? nil : note
+            existing.modifiedAt = .now
+            onSaveEdit()
+        } else {
+            let item = Transaction(
+                title: title.trimmingCharacters(in: .whitespaces),
+                amountMinorUnits: amountMinorUnits,
+                type: type,
+                date: date,
+                createdByUserID: UserIdentityService.shared.currentUserID
+            )
+            item.category = selectedCategory
+            item.paymentMethod = paymentMethod
+            item.note = note.isEmpty ? nil : note
+            onSaveNew(item)
         }
+        return true
     }
 }

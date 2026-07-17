@@ -12,48 +12,57 @@ struct ListsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Account.sortOrder) private var lists: [Account]
     @State private var showingAddList = false
-    @State private var newListName = ""
     @State private var sharingEndedName: String?
     private let sharingHealthTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+
+    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(spacing: 12) {
-                    if !UserIdentityService.shared.isCloudKitAvailable {
-                        iCloudBanner
-                    }
+                if !UserIdentityService.shared.isCloudKitAvailable {
+                    iCloudBanner
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                }
 
+                LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(lists) { list in
-                        NavigationLink(destination: ListDetailView(list: list)) {
-                            ListRow(list: list)
+                        NavigationLink(destination: RootTabView(account: list)) {
+                            BudgetCard(list: list)
                         }
                         .buttonStyle(.plain)
                     }
+
+                    addBudgetCard
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
+                .padding(.bottom, 24)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Lists")
+            .navigationTitle("Бюджеты")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showingAddList = true }) {
+                    Button {
+                        showingAddList = true
+                    } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
-            .alert("New List", isPresented: $showingAddList) {
-                TextField("Name", text: $newListName)
-                Button("Add") { addList() }
-                Button("Cancel", role: .cancel) { newListName = "" }
+            .sheet(isPresented: $showingAddList) {
+                AccountFormView(onSave: { newAccount in
+                    newAccount.sortOrder = lists.count
+                    try? modelContext.save()
+                })
             }
             .overlay {
                 if lists.isEmpty {
                     ContentUnavailableView(
-                        "No Lists",
-                        systemImage: "list.bullet",
-                        description: Text("Tap + to create your first list.")
+                        "Нет бюджетов",
+                        systemImage: "creditcard",
+                        description: Text("Нажмите +, чтобы создать первый бюджет")
                     )
                 }
             }
@@ -66,21 +75,41 @@ struct ListsView: View {
                 await checkForEndedSharing()
             }
             .onReceive(sharingHealthTimer) { _ in
-                Task {
-                    await checkForEndedSharing()
-                }
+                Task { await checkForEndedSharing() }
             }
-            .alert("Sharing Ended", isPresented: .init(
+            .alert("Доступ прекращён", isPresented: .init(
                 get: { sharingEndedName != nil },
                 set: { if !$0 { sharingEndedName = nil } }
             )) {
                 Button("OK", role: .cancel) { sharingEndedName = nil }
             } message: {
                 if let name = sharingEndedName {
-                    Text("\"\(name)\" is no longer shared. A local copy has been kept.")
+                    Text("\"\(name)\" больше не доступен как общий. Локальная копия сохранена.")
                 }
             }
         }
+    }
+
+    private var addBudgetCard: some View {
+        Button {
+            showingAddList = true
+        } label: {
+            VStack(spacing: 10) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.secondary)
+                Text("Новый бюджет")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 150)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color(.tertiaryLabel), style: StrokeStyle(lineWidth: 1.5, dash: [6]))
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private var iCloudBanner: some View {
@@ -89,9 +118,9 @@ struct ListsView: View {
                 .font(.title3)
                 .foregroundStyle(.orange)
             VStack(alignment: .leading, spacing: 2) {
-                Text("iCloud Not Available")
+                Text("iCloud недоступен")
                     .font(.subheadline.weight(.medium))
-                Text("Sign in to iCloud in Settings to enable sharing.")
+                Text("Войдите в iCloud в настройках, чтобы включить общий доступ.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -101,14 +130,6 @@ struct ListsView: View {
         .background(Color(.systemOrange).opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
     }
 
-    private func addList() {
-        guard !newListName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        let list = Account(name: newListName, sortOrder: lists.count)
-        modelContext.insert(list)
-        try? modelContext.save()
-        newListName = ""
-    }
-
     private func checkForEndedSharing() async {
         let sharedLists = lists.filter(\.isShared)
         guard !sharedLists.isEmpty else { return }
@@ -116,65 +137,63 @@ struct ListsView: View {
     }
 }
 
-// MARK: - List Row
+// MARK: - Budget Card
 
-private struct ListRow: View {
+private struct BudgetCard: View {
     let list: Account
 
+    private var currentMonthTransactions: [Transaction] {
+        (list.transactions ?? []).filter {
+            Calendar.current.isDate($0.date, equalTo: .now, toGranularity: .month)
+        }
+    }
+
+    private var balance: Decimal {
+        let income = currentMonthTransactions.filter { $0.type == .income }.reduce(Decimal(0)) { $0 + $1.amount }
+        let expense = currentMonthTransactions.filter { $0.type == .expense }.reduce(Decimal(0)) { $0 + $1.amount }
+        return income - expense
+    }
+
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: list.icon)
-                .font(.title3)
-                .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
-                .background(Color(hex: list.colorHex))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: list.icon)
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color(hex: list.colorHex))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(list.name)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
+                Spacer()
 
-                    if list.isShared {
-                        Image(systemName: "person.2.fill")
-                            .font(.caption2)
-                            .foregroundStyle(.blue)
-                    }
+                if list.isShared {
+                    Image(systemName: "person.2.fill")
+                        .font(.caption)
+                        .foregroundStyle(.blue)
                 }
-
-                Text(itemCountLabel)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
             }
 
-            Spacer()
+            VStack(alignment: .leading, spacing: 4) {
+                Text(list.name)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
 
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
+                Text("\(balance.formattedAsCurrency(code: list.currencyCode)) в этом месяце")
+                    .font(.caption)
+                    .foregroundStyle(balance >= 0 ? Color.secondary : Color.red)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
         }
-        .padding(12)
-        .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    private var itemCountLabel: String {
-        let count = list.transactions?.count ?? 0
-        return count == 1 ? "1 item" : "\(count) items"
-    }
-}
-
-// MARK: - Color Hex
-
-extension Color {
-    init(hex: String) {
-        let cleaned = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-        var rgb: UInt64 = 0
-        Scanner(string: cleaned).scanHexInt64(&rgb)
-        self.init(
-            red: Double((rgb >> 16) & 0xFF) / 255,
-            green: Double((rgb >> 8) & 0xFF) / 255,
-            blue: Double(rgb & 0xFF) / 255
+        .padding(14)
+        .frame(height: 150)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+                .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
         )
     }
 }

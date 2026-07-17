@@ -18,19 +18,30 @@
 import SwiftUI
 import SwiftData
 import CloudKit
+import UserNotifications
 
 // MARK: - App
 
 @main
-struct CloudKitSharingApp: App {
+struct FamilyBudgetApp: App {
     @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
+    @AppStorage("appAppearance") private var appAppearance = "system"
 
     var body: some Scene {
         WindowGroup {
             ListsView()
                 .overlay(CloudKitShareHandler())
+                .preferredColorScheme(colorScheme)
         }
         .modelContainer(DataManager.shared.container)
+    }
+    
+    private var colorScheme: ColorScheme? {
+        switch appAppearance {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
     }
 }
 
@@ -53,7 +64,7 @@ class CloudKitShareCoordinator: ObservableObject {
 
 // MARK: - App Delegate (CloudKit share acceptance)
 
-class AppDelegate: NSObject, UIApplicationDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificationCenterDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -90,6 +101,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             await SharingManager.shared.handleRemoteNotification(userInfo: userInfo)
             completionHandler(.newData)
         }
+    }
+    
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
     }
 }
 
