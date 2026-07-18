@@ -51,7 +51,7 @@ final class DataManager {
     }
 
     private static func createContainer() -> (ModelContainer, Bool) {
-        let schema = Schema(versionedSchema: SchemaV1.self)
+        let schema = Schema(versionedSchema: SchemaV2.self)
 
         // Try with CloudKit first
         let cloudConfig = ModelConfiguration(

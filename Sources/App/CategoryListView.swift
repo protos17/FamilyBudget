@@ -15,7 +15,7 @@ struct CategoryListView: View {
     
     var body: some View {
         List {
-            ForEach(account.categories ?? []) { category in
+            ForEach(account.sortedCategories) { category in
                 HStack {
                     Image(systemName: category.icon)
                         .foregroundStyle(Color(hex: category.colorHex))
@@ -57,7 +57,10 @@ struct CategoryListView: View {
     }
     
     private func deleteCategory(_ category: Category) {
-        modelContext.delete(category)
-        try? modelContext.save()
+        DispatchQueue.main.async {
+            modelContext.delete(category)
+            try? modelContext.save()
+        }
     }
+
 }

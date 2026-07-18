@@ -40,6 +40,7 @@ final class ListDetailViewModel: ObservableObject {
     @Published var showingShareInvite = false
     
     private var modelContext: ModelContext?
+    private var currentSyncTask: Task<Void, Never>?
     
     init(list: Account) {
         self.list = list
@@ -188,7 +189,23 @@ final class ListDetailViewModel: ObservableObject {
     }
     
     func syncSharedItems() async {
-        guard list.isShared, !isSyncing, let context = modelContext else { return }
+        guard list.isShared, let context = modelContext else { return }
+
+        if let existing = currentSyncTask {
+            await existing.value
+            return
+        }
+
+        let task = Task { [weak self] in
+            guard let self else { return }
+            await self.performSync(context: context)
+        }
+        currentSyncTask = task
+        await task.value
+        currentSyncTask = nil
+    }
+
+    private func performSync(context: ModelContext) async {
         isSyncing = true
         defer { isSyncing = false }
         do {

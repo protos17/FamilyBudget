@@ -209,10 +209,10 @@ struct ListDetailView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Spacer()
-            if viewModel.isSyncing {
+//            if viewModel.isSyncing {
                 ProgressView()
                     .controlSize(.small)
-            }
+//            }
         }
         .padding(12)
         .background(Color(.systemBlue).opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
@@ -243,7 +243,7 @@ struct ListDetailView: View {
                 
                 Menu {
                     Button("Все категории") { viewModel.selectedCategory = nil }
-                    ForEach(list.categories ?? []) { category in
+                    ForEach(list.sortedCategories) { category in
                         Button(category.name, systemImage: category.icon) {
                             viewModel.selectedCategory = category
                         }

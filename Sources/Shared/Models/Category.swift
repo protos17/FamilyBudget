@@ -25,6 +25,9 @@ final class Category {
     var sortOrder: Int = 0
 
     var account: Account?
+    
+    @Relationship(deleteRule: .nullify, inverse: \Transaction.category)
+    var transactions: [Transaction]?
 
     init(
         id: UUID = UUID(),

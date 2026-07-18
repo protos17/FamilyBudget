@@ -8,8 +8,8 @@
 
 import SwiftData
 
-enum SchemaV1: VersionedSchema {
-    static let versionIdentifier = Schema.Version(1, 0, 0)
+enum SchemaV2: VersionedSchema {
+    static let versionIdentifier = Schema.Version(2, 0, 0)
     static var models: [any PersistentModel.Type] {
         [Account.self, Transaction.self]
     }
@@ -17,7 +17,7 @@ enum SchemaV1: VersionedSchema {
 
 enum AppMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [SchemaV1.self]
+        [SchemaV2.self]
     }
     static var stages: [MigrationStage] { [] }
 }

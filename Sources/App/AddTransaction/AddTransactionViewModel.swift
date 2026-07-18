@@ -59,7 +59,7 @@ final class AddTransactionViewModel: ObservableObject {
     }
     
     var categories: [Category] {
-        (account.categories ?? []).filter {
+        (account.sortedCategories).filter {
             $0.kind == .universal || $0.kind.matches(type)
         }
     }

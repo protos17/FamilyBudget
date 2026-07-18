@@ -60,6 +60,10 @@ final class Account {
         transactions?.sorted(by: { $0.date > $1.date }) ?? []
     }
 
+    var sortedCategories: [Category] {
+        (categories ?? []).sorted { $0.createdAt < $1.createdAt }
+    }
+
     init(
         id: UUID = UUID(),
         name: String,
