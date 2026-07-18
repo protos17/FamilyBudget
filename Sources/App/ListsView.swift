@@ -146,6 +146,12 @@ struct ListsView: View {
                     sharingEndedName = name
                 }
             }
+            .onReceive(sharingHealthTimer) { _ in
+                Task {
+                    await checkForEndedSharing()
+                    await SharingManager.shared.discoverSharedZones(context: modelContext)
+                }
+            }
             .task {
                 await checkForEndedSharing()
             }

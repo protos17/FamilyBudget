@@ -167,11 +167,20 @@ final class SharingManager {
             self.container.add(operation)
         }
 
-        // Fetch the shared root record to get list metadata
         guard let rootRecordID = metadata.hierarchicalRootRecordID else {
             throw SharingError.invalidShare
         }
-        let record = try await container.sharedCloudDatabase.record(for: rootRecordID)
+        let zoneID = rootRecordID.zoneID
+
+        // Даём серверу время материализовать зону в sharedCloudDatabase,
+        // затем сканируем все записи зоны целиком (устойчивее к propagation delay,
+        // чем прямой fetch по конкретному recordID)
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        let records = try await fetchAllRecordsWithRetry(in: zoneID)
+
+        guard let record = records.first(where: { $0.recordID == rootRecordID }) else {
+            throw SharingError.invalidShare
+        }
 
         // Create or find the local ItemList
         let listID: UUID
@@ -198,7 +207,7 @@ final class SharingManager {
         list.isShared = true
         list.ownerID = metadata.ownerIdentity.userRecordID?.recordName
         list.shareRecordID = metadata.share.recordID.recordName
-        list.shareZoneOwnerName = rootRecordID.zoneID.ownerName
+        list.shareZoneOwnerName = zoneID.ownerName
         list.isPro = true
         list.lastSharedUpdatedAt = Date()
 
@@ -213,6 +222,46 @@ final class SharingManager {
         return list
     }
 
+    /// Сканирует все записи конкретной зоны в sharedCloudDatabase с повторными попытками,
+    /// пока зона не станет доступна (или не истечёт лимит попыток)
+    private func fetchAllRecordsWithRetry(
+        in zoneID: CKRecordZone.ID,
+        maxAttempts: Int = 6
+    ) async throws -> [CKRecord] {
+        var lastError: Error?
+
+        for attempt in 1...maxAttempts {
+            do {
+                let records = try await fetchAllRecords(in: zoneID)
+
+                if !records.isEmpty {
+                    return records
+                }
+
+                let delaySeconds = Double(attempt) * 2   // 2с, 4с, 6с, 8с, 10с, 12с
+                try? await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
+
+            } catch let error as CKError {
+                lastError = error
+
+                let retryableCodes: [CKError.Code] = [
+                    .zoneNotFound, .unknownItem, .networkFailure,
+                    .networkUnavailable, .serviceUnavailable,
+                    .requestRateLimited, .serverResponseLost
+                ]
+                guard retryableCodes.contains(error.code) else {
+                    throw error
+                }
+
+                let delaySeconds = Double(1 << (attempt - 1))
+                try? await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
+            }
+        }
+
+        throw lastError ?? SharingError.invalidShare
+    }
+
+
     // MARK: - Stop Sharing
 
     /// Owner stops sharing a list. Removes the CKShare.
@@ -226,6 +275,8 @@ final class SharingManager {
             let shareRecordID = CKRecord.ID(recordName: shareRecordName, zoneID: sharingZone.zoneID)
             try await container.privateCloudDatabase.deleteRecord(withID: shareRecordID)
         }
+        
+        try await deleteAllCloudRecords(for: list)
 
         // Clear sharing metadata
         list.isShared = false
@@ -237,6 +288,35 @@ final class SharingManager {
 
         logger.info("Stopped sharing list '\(list.name)'")
     }
+    
+    /// Deletes all CloudKit records (list root + items) belonging to this account.
+    /// Safe to call whether the account is currently shared or not.
+    func deleteAllCloudRecords(for list: Account) async throws {
+        let itemRecordIDs = (list.transactions ?? []).map {
+            CKRecord.ID(recordName: "Item-\($0.id.uuidString)", zoneID: sharingZone.zoneID)
+        }
+        let listRecordID = CKRecord.ID(recordName: "List-\(list.id.uuidString)", zoneID: sharingZone.zoneID)
+
+        let allIDsToDelete = itemRecordIDs + [listRecordID]
+
+        guard !allIDsToDelete.isEmpty else { return }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let operation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: allIDsToDelete)
+            operation.modifyRecordsResultBlock = { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+            container.privateCloudDatabase.add(operation)
+        }
+
+        logger.info("Deleted \(allIDsToDelete.count) cloud record(s) for list '\(list.name)'")
+    }
+
 
     // MARK: - Leave Shared List (Member)
 
@@ -654,6 +734,132 @@ final class SharingManager {
         )
     }
 }
+
+extension SharingManager {
+    /// Сканирует sharedCloudDatabase на предмет доступных зон и синкает те, что ещё не отслеживаются локально
+    func discoverSharedZones(context: ModelContext) async {
+        do {
+            let zoneIDs = try await fetchAllSharedZoneIDs()
+            logger.info("Discovered \(zoneIDs.count) shared zone(s)")
+
+            for zoneID in zoneIDs {
+                if isZoneAlreadyTracked(zoneID, context: context) {
+                    continue
+                }
+                await syncNewSharedZone(zoneID, context: context)
+            }
+        } catch {
+            logger.error("Failed to discover shared zones: \(error)")
+        }
+    }
+
+    private func fetchAllSharedZoneIDs() async throws -> [CKRecordZone.ID] {
+        var zoneIDs: [CKRecordZone.ID] = []
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let operation = CKFetchDatabaseChangesOperation(previousServerChangeToken: nil)
+
+            operation.recordZoneWithIDChangedBlock = { zoneID in
+                zoneIDs.append(zoneID)
+            }
+
+            operation.fetchDatabaseChangesResultBlock = { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+
+            container.sharedCloudDatabase.add(operation)
+        }
+
+        return zoneIDs
+    }
+
+    private func isZoneAlreadyTracked(_ zoneID: CKRecordZone.ID, context: ModelContext) -> Bool {
+        let ownerName = zoneID.ownerName
+        let descriptor = FetchDescriptor<Account>(
+            predicate: #Predicate { $0.shareZoneOwnerName == ownerName }
+        )
+        return (try? context.fetch(descriptor).first) != nil
+    }
+
+    private func syncNewSharedZone(_ zoneID: CKRecordZone.ID, context: ModelContext) async {
+        do {
+            let records = try await fetchAllRecords(in: zoneID)
+
+            guard let rootRecord = records.first(where: { $0.recordType == listRecordType }) else {
+                logger.info("Zone \(zoneID) has no root list record yet, skipping")
+                return
+            }
+
+            let listID: UUID
+            if let idString = rootRecord["listID"] as? String, let uuid = UUID(uuidString: idString) {
+                listID = uuid
+            } else {
+                listID = UUID()
+            }
+
+            let descriptor = FetchDescriptor<Account>(predicate: #Predicate { $0.id == listID })
+            if (try? context.fetch(descriptor).first) != nil {
+                return
+            }
+
+            let list = Account(
+                id: listID,
+                name: (rootRecord["name"] as? String) ?? "Shared List",
+                icon: (rootRecord["icon"] as? String) ?? "list.bullet",
+                colorHex: (rootRecord["colorHex"] as? String) ?? "007AFF"
+            )
+            list.isShared = true
+            list.shareZoneOwnerName = zoneID.ownerName
+            list.lastSharedUpdatedAt = Date()
+
+            context.insert(list)
+            try? context.save()
+
+            logger.info("Created list '\(list.name)' from discovered shared zone")
+
+            try? await syncItems(for: list, context: context)
+        } catch {
+            logger.error("Failed to sync new shared zone \(zoneID): \(error)")
+        }
+    }
+
+    private func fetchAllRecords(in zoneID: CKRecordZone.ID) async throws -> [CKRecord] {
+        var records: [CKRecord] = []
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let config = CKFetchRecordZoneChangesOperation.ZoneConfiguration()
+            let operation = CKFetchRecordZoneChangesOperation(
+                recordZoneIDs: [zoneID],
+                configurationsByRecordZoneID: [zoneID: config]
+            )
+
+            operation.recordWasChangedBlock = { _, result in
+                if case .success(let record) = result {
+                    records.append(record)
+                }
+            }
+
+            operation.fetchRecordZoneChangesResultBlock = { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+
+            container.sharedCloudDatabase.add(operation)
+        }
+
+        return records
+    }
+}
+
 
 // MARK: - Errors
 

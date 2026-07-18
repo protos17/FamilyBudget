@@ -28,6 +28,8 @@ targets:
       path: App/Resources/Info.plist
       properties:
         ITSAppUsesNonExemptEncryption: false
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
         UIBackgroundModes:
           - remote-notification
         CKSharingSupported: true
@@ -54,7 +56,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ru.protos.sharebudget
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "8"
+        CURRENT_PROJECT_VERSION: "11"
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: LaunchBackground

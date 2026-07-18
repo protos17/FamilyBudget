@@ -165,6 +165,7 @@
       }
     },
     "You now have access to \"%@\"." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1001,6 +1002,9 @@
           }
         }
       }
+    },
+    "Теперь у вас есть доступ к \"%@\"." : {
+
     },
     "Тип" : {
       "localizations" : {

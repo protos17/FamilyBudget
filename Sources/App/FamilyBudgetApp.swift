@@ -24,6 +24,8 @@ import UserNotifications
 
 @main
 struct YourApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     @AppStorage("appLanguage") private var appLanguageRaw = AppLanguage.system.rawValue
     @AppStorage("appAppearance") private var appAppearance = "system"
     
@@ -82,6 +84,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         Task { @MainActor in
             await UserIdentityService.shared.ensureIdentityResolved()
             await SharingManager.shared.registerSubscriptions()
+            await SharingManager.shared.discoverSharedZones(context: DataManager.shared.container.mainContext)
         }
         
         return true
@@ -140,32 +143,49 @@ class SceneDelegate: NSObject, UIWindowSceneDelegate {
 private struct CloudKitShareHandler: View {
     @ObservedObject private var coordinator = CloudKitShareCoordinator.shared
     @Environment(\.modelContext) private var modelContext
+    @State private var isAccepting = false
     @State private var showingAccepted = false
     @State private var acceptedListName = ""
-    
+    @State private var showingError = false
+    @State private var errorMessage = ""
+
     var body: some View {
         Color.clear
             .frame(width: 0, height: 0)
+            .overlay {
+                if isAccepting {
+                    ProgressView("Подключение к бюджету...")
+                        .padding()
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
             .onChange(of: coordinator.pendingShareMetadata) { _, metadata in
                 guard let metadata else { return }
                 Task {
-                    defer { CloudKitShareCoordinator.shared.clearPendingShare() }
+                    isAccepting = true
+                    defer {
+                        CloudKitShareCoordinator.shared.clearPendingShare()
+                        isAccepting = false
+                    }
                     do {
-                        let list = try await SharingManager.shared.acceptShare(
-                            metadata,
-                            context: modelContext
-                        )
+                        let list = try await SharingManager.shared.acceptShare(metadata, context: modelContext)
                         acceptedListName = list.name
                         showingAccepted = true
                     } catch {
-                        // Share acceptance failed — metadata cleared by defer
+                        errorMessage = "Не удалось подключиться к бюджету: \(error.localizedDescription)"
+                        showingError = true
                     }
                 }
             }
-            .alert("Shared List Added", isPresented: $showingAccepted) {
+            .alert("Бюджет добавлен", isPresented: $showingAccepted) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("You now have access to \"\(acceptedListName)\".")
+                Text("Теперь у вас есть доступ к \"\(acceptedListName)\".")
+            }
+            .alert("Ошибка", isPresented: $showingError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
             }
     }
 }
