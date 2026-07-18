@@ -179,10 +179,10 @@ struct ListDetailView: View {
             guard list.isShared else { return }
             Task { await viewModel.syncSharedItems() }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .modelContextDidSave)) { _ in
-            guard list.isShared else { return }
-            Task { await viewModel.syncSharedItems() }
-        }
+//        .onReceive(NotificationCenter.default.publisher(for: .modelContextDidSave)) { _ in
+//            guard list.isShared else { return }
+//            Task { await viewModel.syncSharedItems() }
+//        }
         .onReceive(NotificationCenter.default.publisher(for: SharingManager.itemsDidSyncNotification)) { _ in
             Task { await viewModel.syncSharedItems() }
         }
@@ -209,10 +209,10 @@ struct ListDetailView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Spacer()
-//            if viewModel.isSyncing {
+            if viewModel.isSyncing {
                 ProgressView()
                     .controlSize(.small)
-//            }
+            }
         }
         .padding(12)
         .background(Color(.systemBlue).opacity(0.08), in: RoundedRectangle(cornerRadius: 10))

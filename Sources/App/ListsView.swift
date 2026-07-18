@@ -17,6 +17,8 @@ struct ListsView: View {
     @State private var showingDeletionError = false
     @State private var deletionErrorMessage = ""
     @State private var accountPendingLeave: Account?
+    @State private var accountPendingDuplication: Account?
+
     private let sharingHealthTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
@@ -37,6 +39,11 @@ struct ListsView: View {
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
+                            Button {
+                                accountPendingDuplication = list
+                            } label: {
+                                Label("Скопировать", systemImage: "doc.on.doc")
+                            }
                             if PermissionManager.shared.canDeleteList(list) {
                                 Button(role: .destructive) {
                                     accountPendingDeletion = list
@@ -71,6 +78,12 @@ struct ListsView: View {
             }
             .sheet(isPresented: $showingAddList) {
                 AccountFormView(onSave: { newAccount in
+                    newAccount.sortOrder = lists.count
+                    try? modelContext.save()
+                })
+            }
+            .sheet(item: $accountPendingDuplication) { source in
+                AccountFormView(duplicateFrom: source, onSave: { newAccount in
                     newAccount.sortOrder = lists.count
                     try? modelContext.save()
                 })

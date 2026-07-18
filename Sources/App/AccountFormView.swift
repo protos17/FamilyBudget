@@ -10,6 +10,7 @@ import SwiftData
 
 struct AccountFormView: View {
     let editingAccount: Account?
+    let duplicateFrom: Account?
     let onSave: (Account) -> Void
     
     @Environment(\.dismiss) private var dismiss
@@ -28,13 +29,16 @@ struct AccountFormView: View {
         "star.fill", "leaf.fill", "pawprint.fill", "figure.2.and.child.holdinghands"
     ]
     
-    init(editingAccount: Account? = nil, onSave: @escaping (Account) -> Void) {
+    init(editingAccount: Account? = nil,
+         duplicateFrom: Account? = nil,
+         onSave: @escaping (Account) -> Void) {
         self.editingAccount = editingAccount
+        self.duplicateFrom = duplicateFrom
         self.onSave = onSave
         _name = State(initialValue: editingAccount?.name ?? "")
-        _icon = State(initialValue: editingAccount?.icon ?? "creditcard.fill")
-        _colorHex = State(initialValue: editingAccount?.colorHex ?? ColorPalette.all[0])
-        _currencyCode = State(initialValue: editingAccount?.currencyCode ?? "RUB")
+        _icon = State(initialValue: editingAccount?.icon ?? duplicateFrom?.icon ?? "creditcard.fill")
+        _colorHex = State(initialValue: editingAccount?.colorHex ?? duplicateFrom?.colorHex ?? ColorPalette.all[0])
+        _currencyCode = State(initialValue: editingAccount?.currencyCode ?? duplicateFrom?.currencyCode ?? "RUB")
     }
     
     var body: some View {
@@ -110,7 +114,7 @@ struct AccountFormView: View {
                     .labelsHidden()
                 }
             }
-            .navigationTitle(editingAccount == nil ? "Новый бюджет" : "Редактировать бюджет")
+            .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -128,6 +132,16 @@ struct AccountFormView: View {
         }
     }
     
+    private var navigationTitleText: String {
+        if editingAccount != nil {
+            return "Редактировать бюджет"
+        } else if duplicateFrom != nil {
+            return "Копия бюджета"
+        } else {
+            return "Новый бюджет"
+        }
+    }
+    
     private func save() {
         if let existing = editingAccount {
             existing.name = name.trimmingCharacters(in: .whitespaces)
@@ -141,9 +155,47 @@ struct AccountFormView: View {
             account.icon = icon
             account.colorHex = colorHex
             modelContext.insert(account)
+            
+            if let source = duplicateFrom {
+                duplicateContents(from: source, into: account)
+            }
+            
             try? modelContext.save()
             onSave(account)
         }
         dismiss()
+    }
+    
+    private func duplicateContents(from source: Account, into newAccount: Account) {
+        var categoryMap: [UUID: Category] = [:]
+        
+        for oldCategory in source.categories ?? [] {
+            let newCategory = Category(
+                name: oldCategory.name,
+                icon: oldCategory.icon,
+                colorHex: oldCategory.colorHex,
+                kind: oldCategory.kind,
+                sortOrder: oldCategory.sortOrder
+            )
+            newCategory.account = newAccount
+            modelContext.insert(newCategory)
+            categoryMap[oldCategory.id] = newCategory
+        }
+        
+        for oldTransaction in source.transactions ?? [] {
+            let newTransaction = Transaction(
+                title: oldTransaction.title,
+                amountMinorUnits: oldTransaction.amountMinorUnits,
+                type: oldTransaction.type,
+                date: oldTransaction.date,
+                createdByUserID: UserIdentityService.shared.currentUserID
+            )
+            newTransaction.note = oldTransaction.note
+            newTransaction.paymentMethod = oldTransaction.paymentMethod
+            newTransaction.tags = oldTransaction.tags
+            newTransaction.category = oldTransaction.category.flatMap { categoryMap[$0.id] }
+            newTransaction.account = newAccount
+            modelContext.insert(newTransaction)
+        }
     }
 }
