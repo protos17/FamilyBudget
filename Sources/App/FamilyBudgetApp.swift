@@ -85,8 +85,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
             await UserIdentityService.shared.ensureIdentityResolved()
             await SharingManager.shared.registerSubscriptions()
             await SharingManager.shared.discoverSharedZones(context: DataManager.shared.container.mainContext)
-        }
-        
+            //sync default categories
+            let context = DataManager.shared.container.mainContext
+            let descriptor = FetchDescriptor<Account>()
+            if let accounts = try? context.fetch(descriptor) {
+                for account in accounts {
+                    DefaultCategories.seed(into: account, context: context)
+                }
+                try? context.save()
+            }
+        }        
         return true
     }
     

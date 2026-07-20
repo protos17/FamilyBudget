@@ -189,7 +189,7 @@ final class ListDetailViewModel: ObservableObject {
     }
     
     func syncSharedItems() async {
-        guard list.isShared, let context = modelContext else { return }
+        guard list.isShared, let context = modelContext, !showingAddTransaction else { return }
 
         if let existing = currentSyncTask {
             await existing.value

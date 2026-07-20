@@ -212,6 +212,7 @@ final class SharingManager {
         list.lastSharedUpdatedAt = Date()
 
         context.insert(list)
+        DefaultCategories.seed(into: list, context: context)
         try? context.save()
 
         logger.info("Share accepted — created list '\(list.name)'")

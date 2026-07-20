@@ -1,4 +1,4 @@
-name: ShareBudget
+name: iShareBudget
 options:
   bundleIdPrefix: ru.protos
   deploymentTarget:
@@ -18,7 +18,7 @@ targets:
   # ─────────────────────────────────────────────
   # Main App
   # ─────────────────────────────────────────────
-  ShareBudget:
+  iShareBudget:
     type: application
     platform: iOS
     sources:
@@ -56,7 +56,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ru.protos.sharebudget
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "11"
+        CURRENT_PROJECT_VERSION: "12"
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: LaunchBackground

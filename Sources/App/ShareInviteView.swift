@@ -25,12 +25,23 @@ struct ShareInviteView: View {
                 }
             }
             
-            if !account.isShared && permissions.canShareList(account) {
-                Section {
-                    Button {
-                        viewModel.presentSharing()
-                    } label: {
-                        Label("Пригласить участника", systemImage: "person.badge.plus")
+            if !account.isShared {
+                if (account.transactions ?? []).isEmpty {
+                    Section {
+                        Label(
+                            "Добавьте хотя бы одну операцию перед тем, как поделиться бюджетом",
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .foregroundStyle(.orange)
+                        .font(.subheadline)
+                    }
+                } else if permissions.canShareList(account) {
+                    Section {
+                        Button {
+                            viewModel.presentSharing()
+                        } label: {
+                            Label("Пригласить участника", systemImage: "person.badge.plus")
+                        }
                     }
                 }
             }

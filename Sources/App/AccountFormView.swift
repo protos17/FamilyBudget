@@ -158,6 +158,8 @@ struct AccountFormView: View {
             
             if let source = duplicateFrom {
                 duplicateContents(from: source, into: account)
+            } else {
+                DefaultCategories.seed(into: account, context: modelContext)
             }
             
             try? modelContext.save()

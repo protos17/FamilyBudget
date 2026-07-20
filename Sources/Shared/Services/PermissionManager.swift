@@ -94,6 +94,7 @@ final class PermissionManager {
         guard !list.isShared else { return false }
         guard userIdentity.isCurrentUserOwner(of: list) else { return false }
         guard userIdentity.isCloudKitAvailable else { return false }
+        guard !(list.transactions ?? []).isEmpty else { return false }   // ← новая проверка
         return true
     }
 }
