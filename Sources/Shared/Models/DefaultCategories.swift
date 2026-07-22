@@ -37,7 +37,8 @@ enum DefaultCategories {
         Blueprint(id: UUID(uuidString: "00000000-0000-0000-0000-000000000011")!, name: "Автомобиль", icon: "car.side.fill", colorHex: "636E72", kind: .expense),
         Blueprint(id: UUID(uuidString: "00000000-0000-0000-0000-000000000012")!, name: "Техника", icon: "desktopcomputer", colorHex: "00B894", kind: .expense),
         Blueprint(id: UUID(uuidString: "00000000-0000-0000-0000-000000000013")!, name: "Хобби", icon: "paintbrush.fill", colorHex: "E17055", kind: .expense),
-        Blueprint(id: UUID(uuidString: "00000000-0000-0000-0000-000000000014")!, name: "Прочее", icon: "ellipsis.circle.fill", colorHex: "95A5A6", kind: .expense)
+        Blueprint(id: UUID(uuidString: "00000000-0000-0000-0000-000000000014")!, name: "Прочее", icon: "ellipsis.circle.fill", colorHex: "95A5A6", kind: .expense),
+        Blueprint(id: UUID(uuidString: "00000000-0000-0000-0000-000000000015")!, name: "Бытовая химия", icon: "waterbottle.fill", colorHex: "D35400", kind: .expense)
     ]
 
     static func seed(into account: Account, context: ModelContext) {
