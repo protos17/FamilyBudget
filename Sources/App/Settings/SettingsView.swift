@@ -11,7 +11,7 @@ struct SettingsView: View {
     @StateObject private var viewModel = GlobalSettingsViewModel()
     @AppStorage("appAppearance") private var appAppearance = "system"
     @AppStorage("appLanguage") private var appLanguageRaw = AppLanguage.system.rawValue
-    
+
     var body: some View {
         Form {
             // MARK: - Внешний вид
@@ -21,7 +21,7 @@ struct SettingsView: View {
                     Text("Светлая").tag("light")
                     Text("Тёмная").tag("dark")
                 }
-                
+
                 Picker("Язык", selection: $appLanguageRaw) {
                     ForEach(AppLanguage.allCases) { language in
                         Text(language.displayName).tag(language.rawValue)
@@ -30,11 +30,54 @@ struct SettingsView: View {
             } header: {
                 Text("Внешний вид")
             }
-            
+
+            // MARK: - ИИ-ассистент
+            Section {
+                Toggle("Включить", isOn: $viewModel.isAIEnabled)
+
+                if viewModel.isAIEnabled {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("API URL")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("https://api.openai.com/v1", text: $viewModel.aiBaseURL)
+                            .textContentType(.URL)
+                            .autocapitalization(.none)
+                            .keyboardType(.URL)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("API ключ")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        SecureField("sk-...", text: $viewModel.aiAPIKey)
+                            .textContentType(.password)
+                            .autocapitalization(.none)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Модель")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("gpt-4o", text: $viewModel.aiModel)
+                            .autocapitalization(.none)
+                    }
+
+                    connectionButton
+
+                    // Постоянный индикатор статуса подключения
+                    connectionHealthIndicator
+                }
+            } header: {
+                Text("ИИ-ассистент")
+            } footer: {
+                Text("Подключите OpenAI-совместимый API для автоматического распознавания трат по фото.")
+            }
+
             // MARK: - Уведомления
             Section {
                 Toggle("Напоминания о бюджете", isOn: $viewModel.remindersEnabled)
-                
+
                 if viewModel.remindersEnabled {
                     DatePicker(
                         "Время напоминания",
@@ -57,7 +100,7 @@ struct SettingsView: View {
             } message: {
                 Text("Чтобы получать напоминания, разрешите уведомления в настройках устройства.")
             }
-            
+
             // MARK: - О приложении
             Section {
                 HStack {
@@ -66,11 +109,11 @@ struct SettingsView: View {
                     Text("\(viewModel.appVersion) (\(viewModel.buildNumber))")
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Link(destination: URL(string: "https://disk.yandex.ru/d/T4Uf88WJ8G7lmw")!) {
                     Label("Политика конфиденциальности", systemImage: "hand.raised.fill")
                 }
-                
+
                 Link(destination: URL(string: "mailto:acerg751@mail.ru")!) {
                     Label("Написать в поддержку", systemImage: "envelope.fill")
                 }
@@ -79,8 +122,84 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Настройки")
+        .scrollDismissesKeyboard(.interactively)
+        .onTapGesture {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil, from: nil, for: nil
+            )
+        }
+    }
+
+    // MARK: - Connection Button
+
+    @ViewBuilder
+    private var connectionButton: some View {
+        Button {
+            hideKeyboard()
+            Task { await viewModel.testAIConnection() }
+        } label: {
+            HStack(spacing: 8) {
+                if viewModel.connectionStatus == .testing {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.white)
+                    Text("Проверяю...")
+                } else {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                    Text("Проверить подключение")
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 32)
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(viewModel.aiBaseURL.isEmpty
+                  || viewModel.aiAPIKey.isEmpty
+                  || viewModel.connectionStatus == .testing)
+    }
+
+    // MARK: - Persistent Connection Health Indicator
+
+    @ViewBuilder
+    private var connectionHealthIndicator: some View {
+        HStack(spacing: 8) {
+            switch viewModel.connectionStatus {
+            case .success:
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text("API подключён")
+                    .foregroundStyle(.green)
+
+            case .failure(let message):
+                Image(systemName: "xmark.octagon.fill")
+                    .foregroundStyle(.red)
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
+
+            default:
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(.red)
+                Text("Подключение не проверено")
+                    .font(.subheadline)
+                    .foregroundStyle(.red)
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 4)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.connectionStatus)
+    }
+
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil, from: nil, for: nil
+        )
     }
 }
+
 // MARK: - Preview
 
 #Preview("Settings") {
@@ -95,4 +214,3 @@ struct SettingsView: View {
             .preferredColorScheme(.dark)
     }
 }
-

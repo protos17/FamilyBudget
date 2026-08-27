@@ -9,6 +9,7 @@
 import SwiftUI
 import SwiftData
 import CloudKit
+import PhotosUI
 
 struct ListDetailView: View {
     let list: Account
@@ -16,6 +17,16 @@ struct ListDetailView: View {
     @Query private var allItems: [Transaction]
     
     @StateObject private var viewModel: ListDetailViewModel
+    
+    // AI connection status from settings
+    @AppStorage("isAIConnectionValid") private var isAIConnectionValid = false
+    @AppStorage("isAIEnabled") private var isAIEnabled = false
+    
+    // Photo recognition state
+    @State private var showingPhotoPicker = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedPhotoData: Data?
+    @State private var isRecognizing = false
     
     private var permissions: PermissionManager { .shared }
     
@@ -48,6 +59,10 @@ struct ListDetailView: View {
     
     private var breakdownSlices: [CategoryBreakdownSlice] {
         viewModel.breakdownSlices(for: filteredItems)
+    }
+    
+    private var canUseAIRecognition: Bool {
+        isAIEnabled && isAIConnectionValid
     }
     
     var body: some View {
@@ -206,6 +221,25 @@ struct ListDetailView: View {
         } message: {
             Text("Вы потеряете доступ к этому списку. Добавленные вами операции останутся у других участников.")
         }
+        // Photo picker for AI recognition
+        .photosPicker(
+            isPresented: $showingPhotoPicker,
+            selection: $selectedPhotoItem,
+            matching: .images
+        )
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            Task {
+                if let newItem, let data = try? await newItem.loadTransferable(type: Data.self) {
+                    selectedPhotoData = data
+                    await recognizeTransactionFromPhoto(data: data)
+                }
+            }
+        }
+        .alert("Распознавание", isPresented: $isRecognizing) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Обработка фото...")
+        }
     }
     
     private func dateHeader(for date: Date) -> some View {
@@ -328,38 +362,84 @@ struct ListDetailView: View {
     // MARK: - Quick Action Buttons
     
     private var quickActionButtons: some View {
-        HStack(spacing: 12) {
-            Button {
-                viewModel.presentAddTransaction(type: .income)
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.down.circle.fill")
-                    Text("Доход")
+        VStack(spacing: 12) {
+            if canUseAIRecognition {
+                Button {
+                    showingPhotoPicker = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "camera.viewfinder")
+                        Text("Распознать по фото")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            colors: [.purple, .blue],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        in: RoundedRectangle(cornerRadius: 14)
+                    )
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color.green, in: RoundedRectangle(cornerRadius: 14))
             }
             
-            Button {
-                viewModel.presentAddTransaction(type: .expense)
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.up.circle.fill")
-                    Text("Расход")
+            HStack(spacing: 12) {
+                Button {
+                    viewModel.presentAddTransaction(type: .income)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text("Доход")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.green, in: RoundedRectangle(cornerRadius: 14))
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color.red, in: RoundedRectangle(cornerRadius: 14))
+                
+                Button {
+                    viewModel.presentAddTransaction(type: .expense)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.up.circle.fill")
+                        Text("Расход")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.red, in: RoundedRectangle(cornerRadius: 14))
+                }
             }
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
         .background(.bar)
+    }
+    
+    // MARK: - Photo Recognition
+    
+    private func recognizeTransactionFromPhoto(data: Data) async {
+        // TODO: Реализовать вызов AI API для распознавания
+        // Пока заглушка — показываем alert с фото
+        isRecognizing = true
+        
+        // Имитация задержки распознавания
+        try? await Task.sleep(for: .seconds(2))
+        
+        isRecognizing = false
+        
+        // Здесь будет реальная логика:
+        // 1. Отправить фото в AI API
+        // 2. Получить распознанные данные (сумма, категория, описание)
+        // 3. Открыть AddTransactionView с предзаполненными данными
+        
+        print("Photo data size: \(data.count) bytes")
+        print("TODO: Call AI API to recognize transaction")
     }
 }
 
