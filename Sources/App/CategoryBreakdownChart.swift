@@ -19,6 +19,7 @@ struct CategoryBreakdownSlice: Identifiable {
 
 struct CategoryBreakdownChart: View {
     let slices: [CategoryBreakdownSlice]
+    let currencyCode: String
     @State private var showingAll = false
     
     private var visibleSlices: [CategoryBreakdownSlice] {
@@ -67,7 +68,7 @@ struct CategoryBreakdownChart: View {
                             Text(slice.categoryName)
                                 .font(.subheadline)
                             Spacer()
-                            Text(String(format: "%.0f%%", slice.percentage))
+                            Text("\(Decimal(slice.amount).formattedAsCurrency(code: currencyCode)) · \(String(format: "%.0f%%", slice.percentage))")
                                 .font(.subheadline.bold())
                                 .foregroundStyle(.secondary)
                         }

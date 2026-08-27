@@ -70,7 +70,7 @@ struct ListDetailView: View {
             .nativeCard()
             .padding(.horizontal)
             
-            CategoryBreakdownChart(slices: breakdownSlices)
+            CategoryBreakdownChart(slices: breakdownSlices, currencyCode: list.currencyCode)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 12, trailing: 0))
             
