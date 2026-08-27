@@ -81,3 +81,18 @@ struct SettingsView: View {
         .navigationTitle("Настройки")
     }
 }
+// MARK: - Preview
+
+#Preview("Settings") {
+    NavigationStack {
+        SettingsView()
+    }
+}
+
+#Preview("Settings — Dark") {
+    NavigationStack {
+        SettingsView()
+            .preferredColorScheme(.dark)
+    }
+}
+
