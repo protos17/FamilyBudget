@@ -426,7 +426,6 @@ private struct ItemCard: View {
     }
 }
 
-
 extension CategoryKind {
     func matches(_ type: TransactionType) -> Bool {
         switch (self, type) {
@@ -439,5 +438,116 @@ extension CategoryKind {
     
     init(matching type: TransactionType) {
         self = type == .income ? .income : .expense
+    }
+}
+
+// MARK: - Preview
+
+#Preview("Список с транзакциями") {
+    let (container, account) = SampleData.createPreviewContainer()
+    
+    return NavigationStack {
+        ListDetailView(list: account)
+    }
+    .modelContainer(container)
+}
+
+// MARK: - Sample Data for Preview
+
+@MainActor
+private enum SampleData {
+    static func createPreviewContainer() -> (ModelContainer, Account) {
+        let schema = Schema([
+            Account.self,
+            Transaction.self,
+            Category.self
+        ])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: [config])
+        
+        let account = createPreviewAccount()
+        let foodCategory = createCategory(name: "Продукты", icon: "cart.fill", colorHex: "FF9500", kind: .expense)
+        let salaryCategory = createCategory(name: "Зарплата", icon: "banknote.fill", colorHex: "34C759", kind: .income)
+        let transportCategory = createCategory(name: "Транспорт", icon: "car.fill", colorHex: "007AFF", kind: .expense)
+        let entertainmentCategory = createCategory(name: "Развлечения", icon: "film.fill", colorHex: "AF52DE", kind: .expense)
+        let shoppingCategory = createCategory(name: "Покупки", icon: "bag.fill", colorHex: "FF2D55", kind: .expense)
+        
+        account.categories = [foodCategory, salaryCategory, transportCategory, entertainmentCategory, shoppingCategory]
+        
+        let calendar = Calendar.current
+        let today = Date.now
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
+        let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: today)!
+        let threeDaysAgo = calendar.date(byAdding: .day, value: -3, to: today)!
+        let lastWeek = calendar.date(byAdding: .day, value: -7, to: today)!
+        let twoWeeksAgo = calendar.date(byAdding: .day, value: -14, to: today)!
+        
+        let transactions = [
+            // Сегодня
+            createTransaction(title: "Кофе", amountMinorUnits: 35000, type: .expense, date: today, category: foodCategory),
+            createTransaction(title: "Обед", amountMinorUnits: 85000, type: .expense, date: today, category: foodCategory),
+            createTransaction(title: "Метро", amountMinorUnits: 5700, type: .expense, date: today, category: transportCategory),
+            // Вчера
+            createTransaction(title: "Продукты", amountMinorUnits: 450000, type: .expense, date: yesterday, category: foodCategory),
+            createTransaction(title: "Кино", amountMinorUnits: 120000, type: .expense, date: yesterday, category: entertainmentCategory),
+            // 2 дня назад
+            createTransaction(title: "Зарплата", amountMinorUnits: 15000000, type: .income, date: twoDaysAgo, category: salaryCategory),
+            createTransaction(title: "Такси", amountMinorUnits: 45000, type: .expense, date: twoDaysAgo, category: transportCategory),
+            // 3 дня назад
+            createTransaction(title: "Одежда", amountMinorUnits: 890000, type: .expense, date: threeDaysAgo, category: shoppingCategory),
+            createTransaction(title: "Ужин в ресторане", amountMinorUnits: 350000, type: .expense, date: threeDaysAgo, category: foodCategory),
+            // Неделя назад
+            createTransaction(title: "Бензин", amountMinorUnits: 250000, type: .expense, date: lastWeek, category: transportCategory),
+            createTransaction(title: "Подписка", amountMinorUnits: 29900, type: .expense, date: lastWeek, category: entertainmentCategory),
+            // 2 недели назад
+            createTransaction(title: "Подарок", amountMinorUnits: 500000, type: .expense, date: twoWeeksAgo, category: shoppingCategory),
+            createTransaction(title: "Фриланс", amountMinorUnits: 750000, type: .income, date: twoWeeksAgo, category: salaryCategory)
+        ]
+        
+        for transaction in transactions {
+            transaction.account = account
+            container.mainContext.insert(transaction)
+        }
+        
+        container.mainContext.insert(account)
+        try? container.mainContext.save()
+        
+        return (container, account)
+    }
+    
+    static func createPreviewAccount() -> Account {
+        let account = Account(
+            id: UUID(),
+            name: "Основной бюджет",
+            icon: "wallet.pass",
+            colorHex: "007AFF"
+        )
+        account.currencyCode = "RUB"
+        account.isShared = false
+        return account
+    }
+    
+    static func createCategory(name: String, icon: String, colorHex: String, kind: CategoryKind) -> Category {
+        let category = Category(
+            id: UUID(),
+            name: name,
+            icon: icon,
+            colorHex: colorHex,
+            kind: kind
+        )
+        return category
+    }
+    
+    static func createTransaction(title: String, amountMinorUnits: Int, type: TransactionType, date: Date, category: Category?) -> Transaction {
+        let transaction = Transaction(
+            id: UUID(),
+            title: title,
+            amountMinorUnits: amountMinorUnits,
+            type: type,
+            date: date,
+            createdByUserID: "current-user"
+        )
+        transaction.category = category
+        return transaction
     }
 }
