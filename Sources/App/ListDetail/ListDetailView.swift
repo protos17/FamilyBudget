@@ -34,6 +34,14 @@ struct ListDetailView: View {
         viewModel.filteredItems(from: allItems)
     }
     
+    private var groupedItems: [(date: Date, items: [Transaction])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: filteredItems) { item in
+            calendar.startOfDay(for: item.date)
+        }
+        return grouped.sorted { $0.key > $1.key }.map { (date: $0.key, items: $0.value) }
+    }
+    
     private var summary: (income: Decimal, expense: Decimal) {
         viewModel.summary(for: filteredItems)
     }
@@ -78,23 +86,28 @@ struct ListDetailView: View {
                 )
                 .listRowSeparator(.hidden)
             } else {
-                ForEach(filteredItems) { item in
-                    ItemCard(item: item, list: list)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            guard permissions.canEdit(item: item, in: list) else { return }
-                            viewModel.presentEditTransaction(item)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            if permissions.canDelete(item: item, in: list) {
-                                Button(role: .destructive) {
-                                    viewModel.deleteItem(item)
-                                } label: {
-                                    Label("Удалить", systemImage: "trash")
+                ForEach(groupedItems, id: \.date) { group in
+                    Section {
+                        ForEach(group.items) { item in
+                            ItemCard(item: item, list: list)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    guard permissions.canEdit(item: item, in: list) else { return }
+                                    viewModel.presentEditTransaction(item)
                                 }
-                            }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    if permissions.canDelete(item: item, in: list) {
+                                        Button(role: .destructive) {
+                                            viewModel.deleteItem(item)
+                                        } label: {
+                                            Label("Удалить", systemImage: "trash")
+                                        }
+                                    }
+                                }
                         }
-                        .listRowSeparator(.visible)
+                    } header: {
+                        dateHeader(for: group.date)
+                    }
                 }
             }
         }
@@ -179,10 +192,6 @@ struct ListDetailView: View {
             guard list.isShared else { return }
             Task { await viewModel.syncSharedItems() }
         }
-//        .onReceive(NotificationCenter.default.publisher(for: .modelContextDidSave)) { _ in
-//            guard list.isShared else { return }
-//            Task { await viewModel.syncSharedItems() }
-//        }
         .onReceive(NotificationCenter.default.publisher(for: SharingManager.itemsDidSyncNotification)) { _ in
             Task { await viewModel.syncSharedItems() }
         }
@@ -197,6 +206,37 @@ struct ListDetailView: View {
         } message: {
             Text("Вы потеряете доступ к этому списку. Добавленные вами операции останутся у других участников.")
         }
+    }
+    
+    private func dateHeader(for date: Date) -> some View {
+        let calendar = Calendar.current
+        let isToday = calendar.isDateInToday(date)
+        let isYesterday = calendar.isDateInYesterday(date)
+        let isThisWeek = calendar.isDate(date, equalTo: .now, toGranularity: .weekOfYear)
+        
+        let text: String
+        if isToday {
+            text = "Сегодня"
+        } else if isYesterday {
+            text = "Вчера"
+        } else if isThisWeek {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .full
+            formatter.locale = Locale(identifier: "ru_RU")
+            text = formatter.localizedString(for: date, relativeTo: .now)
+        } else {
+            let dateFormatter = DateFormatter()
+            dateFormatter.locale = Locale(identifier: "ru_RU")
+            dateFormatter.dateFormat = "d MMMM yyyy"
+            text = dateFormatter.string(from: date)
+        }
+        
+        return Text(text)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .textCase(.uppercase)
+            .padding(.horizontal, 8)
+            .padding(.bottom, 4)
     }
     
     // MARK: - Sharing Banner
@@ -274,7 +314,6 @@ struct ListDetailView: View {
             )
             .foregroundStyle(isActive ? Color.accentColor : .primary)
     }
-    
     
     // MARK: - Share Button
     
