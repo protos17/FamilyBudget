@@ -46,6 +46,10 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+        CFBundleURLTypes:
+          - CFBundleURLName: ru.protos.sharebudget.receiptshare
+            CFBundleURLSchemes:
+              - ishare
     entitlements:
       path: App/Resources/App.entitlements
       properties:
@@ -53,6 +57,11 @@ targets:
           - iCloud.ru.protos.sharebudget
         com.apple.developer.icloud-services:
           - CloudKit
+        com.apple.security.application-groups:
+          - group.ru.protos.sharebudget
+    dependencies:
+      - target: ReceiptShareExtension
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ru.protos.sharebudget
@@ -63,3 +72,34 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: LaunchBackground
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+
+  # ─────────────────────────────────────────────
+  # Receipt Share Extension
+  # ─────────────────────────────────────────────
+  ReceiptShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources/ReceiptShareExtension
+    info:
+      path: ReceiptShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: "ReceiptShareExtension"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsImageWithMaxCount: 1
+    entitlements:
+      path: ReceiptShareExtension/ReceiptShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.ru.protos.sharebudget
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ru.protos.sharebudget.ReceiptShareExtension
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"

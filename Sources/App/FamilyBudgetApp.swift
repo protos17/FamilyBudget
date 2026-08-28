@@ -33,8 +33,12 @@ struct YourApp: App {
         WindowGroup {
             RootTabView()
                 .overlay(CloudKitShareHandler())
+                .overlay(ReceiptImportView())
                 .preferredColorScheme(colorScheme)
                 .environment(\.locale, selectedLocale)
+                .onOpenURL { url in
+                    ReceiptImportCoordinator.shared.handleIncomingURL(url)
+                }
         }
         .modelContainer(DataManager.shared.container)
     }
@@ -50,6 +54,37 @@ struct YourApp: App {
         case "dark": return .dark
         default: return nil
         }
+    }
+}
+
+// MARK: - Receipt Share Extension Coordinator
+
+/// Receives the receipt image handed off by `ReceiptShareExtension` via the
+/// App Group container + `ishare://receipt` URL, and exposes it to SwiftUI.
+@MainActor
+final class ReceiptImportCoordinator: ObservableObject {
+    static let shared = ReceiptImportCoordinator()
+
+    static let appGroupID = "group.ru.protos.sharebudget"
+    private static let pendingReceiptRelativePath = "PendingReceipt/receipt.jpg"
+
+    @Published var pendingImageData: Data?
+
+    func handleIncomingURL(_ url: URL) {
+        guard url.scheme == "ishare", url.host == "receipt" else { return }
+        guard
+            let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Self.appGroupID)
+        else { return }
+
+        let fileURL = containerURL.appendingPathComponent(Self.pendingReceiptRelativePath)
+        guard let data = try? Data(contentsOf: fileURL) else { return }
+        try? FileManager.default.removeItem(at: fileURL)
+
+        pendingImageData = data
+    }
+
+    func clearPendingImage() {
+        pendingImageData = nil
     }
 }
 
