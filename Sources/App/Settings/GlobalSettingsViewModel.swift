@@ -41,6 +41,14 @@ final class GlobalSettingsViewModel: ObservableObject {
         case failure(String)
     }
 
+    private struct ModelsListResponse: Decodable {
+        struct ModelEntry: Decodable { let id: String }
+        let data: [ModelEntry]
+    }
+
+    /// Отправляется из мест, где используется ИИ-распознавание, при ошибке запроса к API
+    static let connectionInvalidatedNotification = Notification.Name("aiConnectionInvalidated")
+
     @Published var isAIEnabled: Bool = UserDefaults.standard.bool(forKey: "isAIEnabled") {
         didSet {
             UserDefaults.standard.set(isAIEnabled, forKey: "isAIEnabled")
@@ -58,6 +66,7 @@ final class GlobalSettingsViewModel: ObservableObject {
             // Сбрасываем статус при изменении URL
             UserDefaults.standard.set(false, forKey: "isAIConnectionValid")
             connectionStatus = .idle
+            availableModels = []
         }
     }
 
@@ -71,6 +80,7 @@ final class GlobalSettingsViewModel: ObservableObject {
             // Сбрасываем статус при изменении ключа
             UserDefaults.standard.set(false, forKey: "isAIConnectionValid")
             connectionStatus = .idle
+            availableModels = []
         }
     }
 
@@ -78,16 +88,31 @@ final class GlobalSettingsViewModel: ObservableObject {
         didSet { UserDefaults.standard.set(aiModel, forKey: "aiModel") }
     }
 
+    /// Список моделей, полученный от API при проверке подключения — используется для пикера в настройках
+    @Published var availableModels: [String] = UserDefaults.standard.stringArray(forKey: "aiAvailableModels") ?? [] {
+        didSet { UserDefaults.standard.set(availableModels, forKey: "aiAvailableModels") }
+    }
+
     @Published var connectionStatus: AIConnectionStatus = .idle
     @Published var showingFailureMessage = false
 
-    // Auto-hide status indicator after a delay
-    private var statusResetTask: Task<Void, Never>?
+    private var connectionInvalidationTask: Task<Void, Never>?
 
     init() {
         if remindersEnabled {
             scheduleReminder()
         }
+
+        connectionInvalidationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            for await _ in NotificationCenter.default.notifications(named: Self.connectionInvalidatedNotification) {
+                self.connectionStatus = .idle
+            }
+        }
+    }
+
+    deinit {
+        connectionInvalidationTask?.cancel()
     }
 
     var appVersion: String {
@@ -101,7 +126,6 @@ final class GlobalSettingsViewModel: ObservableObject {
     // MARK: - AI Connection Test
 
     func testAIConnection() async {
-        statusResetTask?.cancel()
         connectionStatus = .testing
 
         let baseURL = aiBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -110,7 +134,6 @@ final class GlobalSettingsViewModel: ObservableObject {
         guard let url = URL(string: "\(baseURL)/models") else {
             connectionStatus = .failure("Некорректный URL")
             UserDefaults.standard.set(false, forKey: "isAIConnectionValid")
-            scheduleStatusReset()
             return
         }
 
@@ -120,12 +143,11 @@ final class GlobalSettingsViewModel: ObservableObject {
         request.timeoutInterval = 10
 
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await URLSession.shared.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 connectionStatus = .failure("Некорректный ответ сервера")
                 UserDefaults.standard.set(false, forKey: "isAIConnectionValid")
-                scheduleStatusReset()
                 return
             }
 
@@ -133,6 +155,13 @@ final class GlobalSettingsViewModel: ObservableObject {
             case 200:
                 connectionStatus = .success
                 UserDefaults.standard.set(true, forKey: "isAIConnectionValid")
+
+                if let decoded = try? JSONDecoder().decode(ModelsListResponse.self, from: data) {
+                    let ids = decoded.data.map(\.id).sorted()
+                    if !ids.isEmpty {
+                        availableModels = ids
+                    }
+                }
             case 401:
                 connectionStatus = .failure("Неверный API-ключ (401)")
                 UserDefaults.standard.set(false, forKey: "isAIConnectionValid")
@@ -146,17 +175,6 @@ final class GlobalSettingsViewModel: ObservableObject {
         } catch {
             connectionStatus = .failure(error.localizedDescription)
             UserDefaults.standard.set(false, forKey: "isAIConnectionValid")
-        }
-
-        scheduleStatusReset()
-    }
-
-    /// Сбрасывает статус в `.idle` через 5 секунд
-    private func scheduleStatusReset() {
-        statusResetTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(5))
-            guard !Task.isCancelled, let self else { return }
-            withAnimation { self.connectionStatus = .idle }
         }
     }
 

@@ -472,6 +472,9 @@ struct ListDetailView: View {
         } catch {
             viewModel.errorMessage = error.localizedDescription
             viewModel.showingError = true
+
+            UserDefaults.standard.set(false, forKey: "isAIConnectionValid")
+            NotificationCenter.default.post(name: GlobalSettingsViewModel.connectionInvalidatedNotification, object: nil)
         }
     }
     

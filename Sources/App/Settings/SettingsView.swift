@@ -59,8 +59,29 @@ struct SettingsView: View {
                         Text("Модель")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        TextField("gpt-4o", text: $viewModel.aiModel)
-                            .autocapitalization(.none)
+                        HStack(spacing: 8) {
+                            TextField("gpt-4o", text: $viewModel.aiModel)
+                                .autocapitalization(.none)
+
+                            if !viewModel.availableModels.isEmpty {
+                                Menu {
+                                    ForEach(viewModel.availableModels, id: \.self) { model in
+                                        Button {
+                                            viewModel.aiModel = model
+                                        } label: {
+                                            if model == viewModel.aiModel {
+                                                Label(model, systemImage: "checkmark")
+                                            } else {
+                                                Text(model)
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: "chevron.down.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
                     }
 
                     connectionButton
@@ -71,7 +92,7 @@ struct SettingsView: View {
             } header: {
                 Text("ИИ-ассистент")
             } footer: {
-                Text("Подключите OpenAI-совместимый API для автоматического распознавания трат по фото.")
+                Text("Подключите OpenAI-совместимый API для автоматического распознавания трат по фото. Проверьте подключение, чтобы выбрать модель из списка.")
             }
 
             // MARK: - Уведомления
