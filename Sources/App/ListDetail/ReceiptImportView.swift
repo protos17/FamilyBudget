@@ -95,12 +95,16 @@ struct ReceiptImportView: View {
                     coordinator.clearPendingImage()
                 }
             } message: {
-                if let result = recognizedResult, let account = selectedAccount {
-                    let categoryName = result.categoryName ?? "без категории"
-                    let amount = Decimal(result.amount).formattedAsCurrency(code: account.currencyCode)
-                    Text("\(result.title) · \(amount) · \(categoryName)")
-                }
+                Text(recognitionSummary)
             }
+    }
+
+    private var recognitionSummary: String {
+        guard let result = recognizedResult else { return "" }
+        let categoryName = result.categoryName ?? "без категории"
+        let amount = Decimal(result.amount).formattedAsCurrency(code: selectedAccount?.currencyCode ?? "RUB")
+        let date = result.parsedDate.map(DateHelper.getFormattedDate) ?? ""
+        return "\(result.title) · \n\(amount) · \nКатегория - \(categoryName) · \n\(date)"
     }
 
     // MARK: - Import Flow
@@ -159,7 +163,7 @@ struct ReceiptImportView: View {
             title: result.title,
             amountMinorUnits: amountMinorUnits,
             type: .expense,
-            date: .now,
+            date: result.parsedDate ?? .now,
             createdByUserID: UserIdentityService.shared.currentUserID
         )
 

@@ -31,16 +31,6 @@
         }
       }
     },
-    "%@ · %@ · %@" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@ · %3$@"
-          }
-        }
-      }
-    },
     "%@ (%@)" : {
       "localizations" : {
         "ru" : {

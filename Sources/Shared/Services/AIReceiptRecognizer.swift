@@ -34,16 +34,22 @@ enum AIReceiptRecognizer {
 
         Доступные категории: [\(categoryNames)]
 
-        Верни строго JSON-объект со следующими полями:
+        Верни СТРОГО ТОЛЬКО JSON-объект, без markdown-разметки, без ```json, без пояснений, \
+        со следующими полями:
         - "title": краткое описание операции (например "Кофе", "Продукты", "Такси")
         - "amount": сумма расхода как положительное число в основных единицах валюты (например 350.50, не в копейках)
         - "categoryName": название наиболее подходящей категории ТОЛЬКО из списка доступных (строка или null, если ни одна не подходит)
         - "paymentMethod": один из "card", "cash", "transfer", "other" (строка)
+        - "date": дата операции с чека в формате "dd-MM-yyyy" (или "dd-MM-yyyy HH:mm", если видно время). \
+            Если дата на чеке не найдена, верни null — НЕ подставляй сегодняшнюю дату сам.
         - "note": дополнительная информация или null
 
         Если на фото невозможно распознать финансовую операцию, верни JSON: {"error": "описание причины"}.
         """
 
+        // Локальные OpenAI-совместимые серверы (LM Studio, llama.cpp, Ollama и т.п.)
+        // часто не поддерживают response_format/detail — используем только
+        // базовый набор полей, максимально совместимый с любым сервером.
         let requestBody: [String: Any] = [
             "model": model,
             "messages": [
@@ -51,18 +57,16 @@ enum AIReceiptRecognizer {
                 [
                     "role": "user",
                     "content": [
-                        ["type": "text", "text": "Распознай операцию расхода по этому фото. Верни только JSON."],
+                        ["type": "text", "text": "Распознай операцию расхода по этому фото. Верни только JSON, без markdown."],
                         [
                             "type": "image_url",
                             "image_url": [
-                                "url": "data:image/jpeg;base64,\(base64)",
-                                "detail": "high"
+                                "url": "data:image/jpeg;base64,\(base64)"
                             ]
                         ]
                     ]
                 ]
             ],
-            "response_format": ["type": "json_object"],
             "max_tokens": 500,
             "temperature": 0.2
         ]
@@ -71,7 +75,7 @@ enum AIReceiptRecognizer {
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey.trimmingCharacters(in: .whitespacesAndNewlines))", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 30
+        request.timeoutInterval = 60
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -82,11 +86,23 @@ enum AIReceiptRecognizer {
 
         guard httpResponse.statusCode == 200 else {
             var detail = "HTTP \(httpResponse.statusCode)"
-            if let errorJSON = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let errorObj = errorJSON["error"] as? [String: Any],
-               let message = errorObj["message"] as? String {
-                detail = message
+            if let errorJSON = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let errorObj = errorJSON["error"] as? [String: Any],
+                   let message = errorObj["message"] as? String {
+                    detail = message
+                } else if let message = errorJSON["error"] as? String {
+                    detail = message
+                } else if let message = errorJSON["message"] as? String {
+                    detail = message
+                } else if let raw = String(data: data, encoding: .utf8), !raw.isEmpty {
+                    detail = raw
+                }
+            } else if let raw = String(data: data, encoding: .utf8), !raw.isEmpty {
+                detail = raw
             }
+            #if DEBUG
+            print("AIReceiptRecognizer error \(httpResponse.statusCode): \(detail)")
+            #endif
             throw RecognitionError.apiError(statusCode: httpResponse.statusCode, message: detail)
         }
 
@@ -94,8 +110,11 @@ enum AIReceiptRecognizer {
               let choices = json["choices"] as? [[String: Any]],
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],
-              let content = message["content"] as? String,
-              let contentData = content.data(using: .utf8) else {
+              let content = message["content"] as? String else {
+            throw RecognitionError.parseError
+        }
+
+        guard let contentData = Self.extractJSONData(from: content) else {
             throw RecognitionError.parseError
         }
 
@@ -109,6 +128,32 @@ enum AIReceiptRecognizer {
         } catch {
             throw RecognitionError.parseError
         }
+    }
+
+    /// Локальные модели (например Qwen2.5-VL) часто оборачивают JSON в ```json ... ```
+    /// или добавляют пояснительный текст вокруг него. Эта функция вычленяет
+    /// первый валидный JSON-объект из произвольного текстового ответа.
+    private static func extractJSONData(from content: String) -> Data? {
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Быстрый путь: весь контент уже является JSON
+        if let data = trimmed.data(using: .utf8),
+           (try? JSONSerialization.jsonObject(with: data)) != nil {
+            return data
+        }
+
+        // Ищем содержимое между первой '{' и последней '}'
+        if let firstBrace = trimmed.firstIndex(of: "{"),
+           let lastBrace = trimmed.lastIndex(of: "}"),
+           firstBrace < lastBrace {
+            let substring = String(trimmed[firstBrace...lastBrace])
+            if let data = substring.data(using: .utf8),
+               (try? JSONSerialization.jsonObject(with: data)) != nil {
+                return data
+            }
+        }
+
+        return nil
     }
 
     private static func compressImage(_ data: Data, maxDimension: CGFloat = 1536) -> Data? {
@@ -137,7 +182,30 @@ struct RecognizedTransactionData: Codable {
     let amount: Double
     let categoryName: String?
     let paymentMethod: String?
+    /// Дата операции с чека в формате "dd-MM-yyyy" или "dd-MM-yyyy HH:mm".
+    /// Может отсутствовать, если модель не смогла её распознать.
+    let date: String?
     let note: String?
+
+    /// Парсит `date` в `Date`. Возвращает `nil`, если поле отсутствует
+    /// или не соответствует ожидаемому формату — в таком случае вызывающий
+    /// код должен сам подставить дефолт (например `.now`).
+    var parsedDate: Date? {
+        guard let date, !date.isEmpty else { return nil }
+
+        let formatsToTry = ["dd-MM-yyyy", "dd-MM-yyyy HH:mm", "yyyy-MM-dd"]
+        let formatter = DateFormatter()
+        formatter.locale = Locale.autoupdatingCurrent
+        formatter.timeZone = .current
+
+        for format in formatsToTry {
+            formatter.dateFormat = format
+            if let parsed = formatter.date(from: date) {
+                return parsed
+            }
+        }
+        return nil
+    }
 }
 
 // MARK: - Recognition Errors

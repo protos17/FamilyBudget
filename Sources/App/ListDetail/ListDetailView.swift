@@ -269,12 +269,16 @@ struct ListDetailView: View {
                 recognizedResult = nil
             }
         } message: {
-            if let result = recognizedResult {
-                let categoryName = result.categoryName ?? "без категории"
-                let amount = Decimal(result.amount).formattedAsCurrency(code: list.currencyCode)
-                Text("\(result.title) · \(amount) · \(categoryName)")
-            }
+            Text(recognitionSummary)
         }
+    }
+
+    private var recognitionSummary: String {
+        guard let result = recognizedResult else { return "" }
+        let categoryName = result.categoryName ?? "без категории"
+        let amount = Decimal(result.amount).formattedAsCurrency(code: list.currencyCode)
+        let date = result.parsedDate.map(DateHelper.getFormattedDate) ?? ""
+        return "\(result.title) · \n\(amount) · \nКатегория - \(categoryName) · \n\(date)"
     }
     
     private func dateHeader(for date: Date) -> some View {
@@ -294,10 +298,7 @@ struct ListDetailView: View {
             formatter.locale = Locale(identifier: "ru_RU")
             text = formatter.localizedString(for: date, relativeTo: .now)
         } else {
-            let dateFormatter = DateFormatter()
-            dateFormatter.locale = Locale(identifier: "ru_RU")
-            dateFormatter.dateFormat = "d MMMM yyyy"
-            text = dateFormatter.string(from: date)
+            text = DateHelper.getFormattedDate(from: date)
         }
         
         return Text(text)
@@ -494,7 +495,7 @@ struct ListDetailView: View {
             title: result.title,
             amountMinorUnits: amountMinorUnits,
             type: .expense,
-            date: .now,
+            date: result.parsedDate ?? .now,
             createdByUserID: UserIdentityService.shared.currentUserID
         )
         
