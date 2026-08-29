@@ -23,6 +23,12 @@
     },
     "%@ · %@" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%1$@ · %2$@"
+          }
+        },
         "ru" : {
           "stringUnit" : {
             "state" : "new",
@@ -33,6 +39,12 @@
     },
     "%@ (%@)" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%1$@ (%2$@)"
+          }
+        },
         "ru" : {
           "stringUnit" : {
             "state" : "new",
@@ -103,13 +115,34 @@
       }
     },
     "API URL" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "API URL"
+          }
+        }
+      }
     },
     "API ключ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "API Key"
+          }
+        }
+      }
     },
     "API подключён" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "API Connected"
+          }
+        }
+      }
     },
     "EUR — €" : {
       "localizations" : {
@@ -509,7 +542,14 @@
       }
     },
     "ИИ-ассистент" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "AI Assistant"
+          }
+        }
+      }
     },
     "Иконка" : {
       "extractionState" : "stale",
@@ -565,7 +605,14 @@
       }
     },
     "Модель" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Model"
+          }
+        }
+      }
     },
     "Нажмите +, чтобы создать первый бюджет" : {
       "localizations" : {
@@ -815,10 +862,24 @@
       }
     },
     "Подключение не проверено" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Connection Not Tested"
+          }
+        }
+      }
     },
     "Подключите OpenAI-совместимый API для автоматического распознавания трат по фото. Проверьте подключение, чтобы выбрать модель из списка." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Connect an OpenAI-compatible API for automatic recognition of expenses from photos. Test the connection to choose a model from the list."
+          }
+        }
+      }
     },
     "Показать все" : {
       "extractionState" : "stale",
@@ -887,16 +948,44 @@
       }
     },
     "Проверить подключение" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Test Connection"
+          }
+        }
+      }
     },
     "Проверяю..." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Testing..."
+          }
+        }
+      }
     },
     "Распознать по фото" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Recognize from Photo"
+          }
+        }
+      }
     },
     "Распознаю…" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Recognizing…"
+          }
+        }
+      }
     },
     "Расход" : {
       "localizations" : {
@@ -983,7 +1072,14 @@
       }
     },
     "Создайте бюджет в приложении, чтобы распознавать чеки." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Create a budget in the app to recognize receipts."
+          }
+        }
+      }
     },
     "Создать" : {
       "extractionState" : "stale",
@@ -1050,7 +1146,14 @@
       }
     },
     "Теперь у вас есть доступ к \"%@\"." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Now you have access to “%@”."
+          }
+        }
+      }
     },
     "Тип" : {
       "localizations" : {
@@ -1235,5 +1338,5 @@
       }
     }
   },
-  "version" : "1.2"
+  "version" : "1.3"
 }
