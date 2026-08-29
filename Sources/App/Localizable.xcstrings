@@ -269,6 +269,17 @@
         }
       }
     },
+    "Бюджеты под контролем" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Budgets under control"
+          }
+        }
+      }
+    },
     "Валюта" : {
       "localizations" : {
         "en" : {
@@ -286,6 +297,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enter a valid amount"
+          }
+        }
+      }
+    },
+    "Ведите доходы и расходы по месяцам. У каждого бюджета своя валюта и свой лимит." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Track income and expenses by month. Each budget has its own currency and limit."
           }
         }
       }
@@ -426,6 +448,17 @@
         }
       }
     },
+    "Далее" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next"
+          }
+        }
+      }
+    },
     "Данные" : {
       "localizations" : {
         "en" : {
@@ -443,6 +476,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Date"
+          }
+        }
+      }
+    },
+    "Диаграммы по категориям, лимиты расходов и экспорт операций в CSV." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charts by category, spending limits, and CSV export of transactions."
           }
         }
       }
@@ -583,6 +627,17 @@
         }
       }
     },
+    "Категории и аналитика" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Categories and analytics"
+          }
+        }
+      }
+    },
     "Категория" : {
       "localizations" : {
         "en" : {
@@ -710,6 +765,17 @@
         }
       }
     },
+    "Начать" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get Started"
+          }
+        }
+      }
+    },
     "Не удалось создать файл" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -818,6 +884,17 @@
         }
       }
     },
+    "Общий доступ через iCloud" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shared access via iCloud"
+          }
+        }
+      }
+    },
     "Открыть настройки" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -881,6 +958,17 @@
         }
       }
     },
+    "Подключите свой ИИ-сервис в настройках и просто сфотографируйте чек." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect your own AI service in settings and just photograph a receipt."
+          }
+        }
+      }
+    },
     "Показать все" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -936,6 +1024,17 @@
         }
       }
     },
+    "Пригласите семью в бюджет — операции синхронизируются на всех устройствах." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invite your family to a budget — transactions sync across all devices."
+          }
+        }
+      }
+    },
     "Пригласить участника" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -963,6 +1062,17 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Testing..."
+          }
+        }
+      }
+    },
+    "Пропустить" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip"
           }
         }
       }
@@ -1281,6 +1391,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Color"
+          }
+        }
+      }
+    },
+    "Чек превращается в операции" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A receipt becomes a transaction"
           }
         }
       }
