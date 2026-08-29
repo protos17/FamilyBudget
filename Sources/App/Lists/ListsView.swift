@@ -7,22 +7,17 @@
 
 import SwiftUI
 import SwiftData
+import Combine
 
 struct ListsView: View {
+    @StateObject private var viewModel = ListsViewModel()
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Account.sortOrder) private var lists: [Account]
-    @State private var showingAddList = false
-    @State private var sharingEndedName: String?
-    @State private var accountPendingDeletion: Account?
-    @State private var showingDeletionError = false
-    @State private var deletionErrorMessage = ""
-    @State private var accountPendingLeave: Account?
-    @State private var accountPendingDuplication: Account?
 
     private let sharingHealthTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
-    
+
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -31,7 +26,7 @@ struct ListsView: View {
                         .padding(.horizontal)
                         .padding(.top, 8)
                 }
-                
+
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(lists) { list in
                         NavigationLink(destination: ListDetailView(list: list)) {
@@ -40,19 +35,19 @@ struct ListsView: View {
                         .buttonStyle(.plain)
                         .contextMenu {
                             Button {
-                                accountPendingDuplication = list
+                                viewModel.accountPendingDuplication = list
                             } label: {
                                 Label("Скопировать", systemImage: "doc.on.doc")
                             }
                             if PermissionManager.shared.canDeleteList(list) {
                                 Button(role: .destructive) {
-                                    accountPendingDeletion = list
+                                    viewModel.accountPendingDeletion = list
                                 } label: {
                                     Label("Удалить бюджет", systemImage: "trash")
                                 }
                             } else if PermissionManager.shared.canLeaveList(list) {
                                 Button(role: .destructive) {
-                                    accountPendingLeave = list
+                                    viewModel.accountPendingLeave = list
                                 } label: {
                                     Label("Покинуть бюджет", systemImage: "rectangle.portrait.and.arrow.right")
                                 }
@@ -70,22 +65,20 @@ struct ListsView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        showingAddList = true
+                        viewModel.showingAddList = true
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
-            .sheet(isPresented: $showingAddList) {
+            .sheet(isPresented: $viewModel.showingAddList) {
                 AccountFormView(onSave: { newAccount in
-                    newAccount.sortOrder = lists.count
-                    try? modelContext.save()
+                    viewModel.addList(sortOrder: lists.count, newAccount: newAccount)
                 })
             }
-            .sheet(item: $accountPendingDuplication) { source in
+            .sheet(item: $viewModel.accountPendingDuplication) { source in
                 AccountFormView(duplicateFrom: source, onSave: { newAccount in
-                    newAccount.sortOrder = lists.count
-                    try? modelContext.save()
+                    viewModel.addList(sortOrder: lists.count, newAccount: newAccount)
                 })
             }
             .overlay {
@@ -98,87 +91,85 @@ struct ListsView: View {
                 }
             }
             .confirmationDialog(
-                "Удалить \"\(accountPendingDeletion?.name ?? "")\"?",
+                "Удалить \"\(viewModel.accountPendingDeletion?.name ?? "")\"?",
                 isPresented: Binding(
-                    get: { accountPendingDeletion != nil },
-                    set: { if !$0 { accountPendingDeletion = nil } }
+                    get: { viewModel.accountPendingDeletion != nil },
+                    set: { if !$0 { viewModel.accountPendingDeletion = nil } }
                 ),
                 titleVisibility: .visible
             ) {
                 Button("Удалить", role: .destructive) {
-                    if let account = accountPendingDeletion {
-                        deleteAccount(account)
+                    if let account = viewModel.accountPendingDeletion {
+                        viewModel.deleteAccount(account)
                     }
-                    accountPendingDeletion = nil
+                    viewModel.accountPendingDeletion = nil
                 }
                 Button("Отмена", role: .cancel) {
-                    accountPendingDeletion = nil
+                    viewModel.accountPendingDeletion = nil
                 }
             } message: {
-                if let account = accountPendingDeletion, account.isShared {
+                if let account = viewModel.accountPendingDeletion, account.isShared {
                     Text("Этот бюджет расшарен. Удаление прекратит доступ для всех участников. Все операции и категории будут удалены безвозвратно.")
                 } else {
                     Text("Все операции и категории этого бюджета будут удалены безвозвратно.")
                 }
             }
             .confirmationDialog(
-                "Покинуть \"\(accountPendingLeave?.name ?? "")\"?",
+                "Покинуть \"\(viewModel.accountPendingLeave?.name ?? "")\"?",
                 isPresented: Binding(
-                    get: { accountPendingLeave != nil },
-                    set: { if !$0 { accountPendingLeave = nil } }
+                    get: { viewModel.accountPendingLeave != nil },
+                    set: { if !$0 { viewModel.accountPendingLeave = nil } }
                 ),
                 titleVisibility: .visible
             ) {
                 Button("Покинуть", role: .destructive) {
-                    if let account = accountPendingLeave {
-                        leaveAccount(account)
+                    if let account = viewModel.accountPendingLeave {
+                        viewModel.leaveAccount(account)
                     }
-                    accountPendingLeave = nil
+                    viewModel.accountPendingLeave = nil
                 }
                 Button("Отмена", role: .cancel) {
-                    accountPendingLeave = nil
+                    viewModel.accountPendingLeave = nil
                 }
             } message: {
                 Text("Вы потеряете доступ к этому бюджету. Добавленные вами операции останутся у других участников.")
             }
             .onReceive(NotificationCenter.default.publisher(for: SharingManager.sharingEndedNotification)) { notification in
-                if let name = notification.userInfo?["listName"] as? String {
-                    sharingEndedName = name
-                }
+                viewModel.handleSharingEndedNotification(notification)
             }
             .onReceive(sharingHealthTimer) { _ in
                 Task {
-                    await checkForEndedSharing()
-                    await SharingManager.shared.discoverSharedZones(context: modelContext)
+                    await viewModel.checkForEndedSharing(in: lists)
+                    await viewModel.refreshSharedZones()
                 }
             }
             .task {
-                await checkForEndedSharing()
-            }
-            .onReceive(sharingHealthTimer) { _ in
-                Task { await checkForEndedSharing() }
+                await viewModel.checkForEndedSharing(in: lists)
             }
             .alert("Доступ прекращён", isPresented: .init(
-                get: { sharingEndedName != nil },
-                set: { if !$0 { sharingEndedName = nil } }
+                get: { viewModel.sharingEndedName != nil },
+                set: { if !$0 { viewModel.sharingEndedName = nil } }
             )) {
-                Button("OK", role: .cancel) { sharingEndedName = nil }
+                Button("OK", role: .cancel) { viewModel.sharingEndedName = nil }
             } message: {
-                if let name = sharingEndedName {
+                if let name = viewModel.sharingEndedName {
                     Text("\"\(name)\" больше не доступен как общий. Локальная копия сохранена.")
                 }
             }
-            .alert("Ошибка", isPresented: $showingDeletionError) {
+            .alert("Ошибка", isPresented: $viewModel.showingDeletionError) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(deletionErrorMessage)
+                Text(viewModel.deletionErrorMessage)
             }
         }
+        .onAppear {
+            viewModel.attach(context: modelContext)
+        }
     }
-    
+
     private var addBudgetCard: some View {
         Button {
-            showingAddList = true
+            viewModel.showingAddList = true
         } label: {
             VStack(spacing: 10) {
                 Image(systemName: "plus.circle.fill")
@@ -197,7 +188,7 @@ struct ListsView: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     private var iCloudBanner: some View {
         HStack(spacing: 10) {
             Image(systemName: "icloud.slash")
@@ -215,55 +206,25 @@ struct ListsView: View {
         .padding(12)
         .background(Color(.systemOrange).opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
     }
-    
-    private func deleteAccount(_ account: Account) {
-        if account.isShared {
-            Task {
-                do {
-                    try await SharingManager.shared.stopSharing(account, context: modelContext)
-                    modelContext.delete(account)
-                    try? modelContext.save()
-                } catch {
-                    deletionErrorMessage = "Не удалось удалить бюджет: \(error.localizedDescription)"
-                    showingDeletionError = true
-                }
-            }
-        } else {
-            modelContext.delete(account)
-            try? modelContext.save()
-        }
-    }
-    
-    private func leaveAccount(_ account: Account) {
-        Task {
-            try? await SharingManager.shared.leaveSharedList(account, context: modelContext)
-        }
-    }
-    
-    private func checkForEndedSharing() async {
-        let sharedLists = lists.filter(\.isShared)
-        guard !sharedLists.isEmpty else { return }
-        await SharingManager.shared.checkForEndedSharing(in: sharedLists, context: modelContext)
-    }
 }
 
 // MARK: - Budget Card
 
 private struct BudgetCard: View {
     let list: Account
-    
+
     private var currentMonthTransactions: [Transaction] {
         (list.transactions ?? []).filter {
             Calendar.current.isDate($0.date, equalTo: .now, toGranularity: .month)
         }
     }
-    
+
     private var balance: Decimal {
         let income = currentMonthTransactions.filter { $0.type == .income }.reduce(Decimal(0)) { $0 + $1.amount }
         let expense = currentMonthTransactions.filter { $0.type == .expense }.reduce(Decimal(0)) { $0 + $1.amount }
         return income - expense
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -273,28 +234,28 @@ private struct BudgetCard: View {
                     .frame(width: 44, height: 44)
                     .background(Color(hex: list.colorHex))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                
+
                 Spacer()
-                
+
                 if list.isShared {
                     Image(systemName: "person.2.fill")
                         .font(.caption)
                         .foregroundStyle(.blue)
                 }
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(list.name)
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-                
+
                 Text("\(balance.formattedAsCurrency(code: list.currencyCode)) в этом месяце")
                     .font(.caption)
                     .foregroundStyle(balance >= 0 ? Color.secondary : Color.red)
                     .lineLimit(1)
             }
-            
+
             Spacer(minLength: 0)
         }
         .padding(14)
