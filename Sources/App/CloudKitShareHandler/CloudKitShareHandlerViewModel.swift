@@ -17,15 +17,33 @@ final class CloudKitShareHandlerViewModel: ObservableObject {
     @Published var showingError = false
     @Published var errorMessage = ""
 
+    private let sharing: any SharingProviding
+    private let pendingShare: any PendingShareClearing
+
+    init(
+        sharing: any SharingProviding = SharingManager.shared,
+        pendingShare: any PendingShareClearing = CloudKitShareCoordinator.shared
+    ) {
+        self.sharing = sharing
+        self.pendingShare = pendingShare
+    }
+
     func acceptShare(_ metadata: CKShare.Metadata?, context: ModelContext) async {
         guard let metadata else { return }
+        await performAccept { [sharing] in
+            try await sharing.acceptShare(metadata, context: context)
+        }
+    }
+
+    /// Extracted seam so tests can exercise the success/failure branches without a real `CKShare.Metadata`.
+    func performAccept(_ accept: () async throws -> Account) async {
         isAccepting = true
         defer {
-            CloudKitShareCoordinator.shared.clearPendingShare()
+            pendingShare.clearPendingShare()
             isAccepting = false
         }
         do {
-            let list = try await SharingManager.shared.acceptShare(metadata, context: context)
+            let list = try await accept()
             acceptedListName = list.name
             showingAccepted = true
         } catch {

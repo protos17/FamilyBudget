@@ -19,6 +19,11 @@ final class ListsViewModel: ObservableObject {
     @Published var accountPendingDuplication: Account?
 
     private var modelContext: ModelContext?
+    private let sharing: any SharingProviding
+
+    init(sharing: any SharingProviding = SharingManager.shared) {
+        self.sharing = sharing
+    }
 
     func attach(context: ModelContext) {
         self.modelContext = context
@@ -35,7 +40,7 @@ final class ListsViewModel: ObservableObject {
         if account.isShared {
             Task {
                 do {
-                    try await SharingManager.shared.stopSharing(account, context: modelContext)
+                    try await sharing.stopSharing(account, context: modelContext)
                     modelContext.delete(account)
                     try? modelContext.save()
                 } catch {
@@ -52,7 +57,7 @@ final class ListsViewModel: ObservableObject {
     func leaveAccount(_ account: Account) {
         guard let modelContext else { return }
         Task {
-            try? await SharingManager.shared.leaveSharedList(account, context: modelContext)
+            try? await sharing.leaveSharedList(account, context: modelContext)
         }
     }
 
@@ -66,11 +71,11 @@ final class ListsViewModel: ObservableObject {
         guard let modelContext else { return }
         let sharedLists = lists.filter(\.isShared)
         guard !sharedLists.isEmpty else { return }
-        await SharingManager.shared.checkForEndedSharing(in: sharedLists, context: modelContext)
+        await sharing.checkForEndedSharing(in: sharedLists, context: modelContext)
     }
 
     func refreshSharedZones() async {
         guard let modelContext else { return }
-        await SharingManager.shared.discoverSharedZones(context: modelContext)
+        await sharing.discoverSharedZones(context: modelContext)
     }
 }

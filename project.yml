@@ -24,6 +24,9 @@ targets:
     sources:
       - path: Sources/App
       - path: Sources/Shared
+    scheme:
+      testTargets:
+        - iShareBudgetTests
     info:
       path: App/Resources/Info.plist
       properties:
@@ -103,3 +106,18 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1,2"
+
+  # ─────────────────────────────────────────────
+  # Unit Tests
+  # ─────────────────────────────────────────────
+  iShareBudgetTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/iShareBudgetTests
+    dependencies:
+      - target: iShareBudget
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ru.protos.sharebudget.tests
+        GENERATE_INFOPLIST_FILE: YES

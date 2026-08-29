@@ -26,17 +26,21 @@ final class AddTransactionViewModel: ObservableObject {
     @Published var showingCreateCategory = false
     
     var isEditing: Bool { editingTransaction != nil }
-    
+
+    private let identity: any UserIdentityProviding
+
     init(
         account: Account,
         prefilledType: TransactionType,
         editingTransaction: Transaction?,
         recognizedData: RecognizedTransactionData? = nil,
+        identity: any UserIdentityProviding = UserIdentityService.shared,
         onSaveNew: @escaping (Transaction) -> Void,
         onSaveEdit: @escaping () -> Void
     ) {
         self.account = account
         self.editingTransaction = editingTransaction
+        self.identity = identity
         self.onSaveNew = onSaveNew
         self.onSaveEdit = onSaveEdit
         
@@ -83,8 +87,12 @@ final class AddTransactionViewModel: ObservableObject {
     
     private var parsedAmount: Int? {
         let normalized = amountText.replacingOccurrences(of: ",", with: ".")
-        guard let decimal = Decimal(string: normalized), decimal > 0 else { return nil }
-        return Int(truncating: (decimal * 100) as NSDecimalNumber)
+        guard var decimal = Decimal(string: normalized), decimal > 0 else { return nil }
+        decimal *= 100
+        var minorUnitsDecimal = Decimal()
+        NSDecimalRound(&minorUnitsDecimal, &decimal, 0, .plain)
+        let minorUnits = Int(truncating: minorUnitsDecimal as NSDecimalNumber)
+        return minorUnits > 0 ? minorUnits : nil
     }
     
     func save() -> Bool {
@@ -109,7 +117,7 @@ final class AddTransactionViewModel: ObservableObject {
                 amountMinorUnits: amountMinorUnits,
                 type: type,
                 date: date,
-                createdByUserID: UserIdentityService.shared.currentUserID
+                createdByUserID: identity.currentUserID
             )
             item.category = selectedCategory
             item.paymentMethod = paymentMethod

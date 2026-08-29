@@ -12,10 +12,12 @@ import SwiftData
 final class CloudSharingViewModel: ObservableObject {
     let list: Account
     let context: ModelContext
+    private let sharing: any SharingProviding
 
-    init(list: Account, context: ModelContext) {
+    init(list: Account, context: ModelContext, sharing: any SharingProviding = SharingManager.shared) {
         self.list = list
         self.context = context
+        self.sharing = sharing
     }
 
     var itemTitle: String? {
@@ -47,6 +49,6 @@ final class CloudSharingViewModel: ObservableObject {
     }
 
     func stopSharing() async {
-        try? await SharingManager.shared.stopSharing(list, context: context)
+        try? await sharing.stopSharing(list, context: context)
     }
 }

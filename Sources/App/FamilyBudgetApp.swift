@@ -90,20 +90,28 @@ final class ReceiptImportCoordinator: ObservableObject {
 
 // MARK: - CloudKit Share Coordinator
 
+/// Protocol for dependency injection in tests
+@MainActor
+protocol PendingShareClearing {
+    func clearPendingShare()
+}
+
 /// Holds pending share metadata between the scene delegate callback and SwiftUI.
 @MainActor
 class CloudKitShareCoordinator: ObservableObject {
     static let shared = CloudKitShareCoordinator()
     @Published var pendingShareMetadata: CKShare.Metadata?
-    
+
     func handleShareMetadata(_ metadata: CKShare.Metadata) {
         pendingShareMetadata = metadata
     }
-    
+
     func clearPendingShare() {
         pendingShareMetadata = nil
     }
 }
+
+extension CloudKitShareCoordinator: PendingShareClearing {}
 
 // MARK: - App Delegate (CloudKit share acceptance)
 

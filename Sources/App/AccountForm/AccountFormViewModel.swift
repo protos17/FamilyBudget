@@ -22,7 +22,8 @@ final class AccountFormViewModel: ObservableObject {
     @Published var showingSymbolPicker = false
     
     private var modelContext: ModelContext?
-    
+    private let identity: any UserIdentityProviding
+
     var isEditing: Bool { editingAccount != nil }
     
     var canSave: Bool {
@@ -39,9 +40,15 @@ final class AccountFormViewModel: ObservableObject {
         }
     }
     
-    init(editingAccount: Account?, duplicateFrom: Account?, onSave: @escaping (Account) -> Void) {
+    init(
+        editingAccount: Account?,
+        duplicateFrom: Account?,
+        identity: any UserIdentityProviding = UserIdentityService.shared,
+        onSave: @escaping (Account) -> Void
+    ) {
         self.editingAccount = editingAccount
         self.duplicateFrom = duplicateFrom
+        self.identity = identity
         self.onSave = onSave
         self.name = editingAccount?.name ?? ""
         self.icon = editingAccount?.icon ?? duplicateFrom?.icon ?? "creditcard.fill"
@@ -102,7 +109,7 @@ final class AccountFormViewModel: ObservableObject {
                 amountMinorUnits: oldTransaction.amountMinorUnits,
                 type: oldTransaction.type,
                 date: oldTransaction.date,
-                createdByUserID: UserIdentityService.shared.currentUserID
+                createdByUserID: identity.currentUserID
             )
             newTransaction.note = oldTransaction.note
             newTransaction.paymentMethod = oldTransaction.paymentMethod

@@ -42,17 +42,25 @@ final class ListDetailViewModel: ObservableObject {
     
     private var modelContext: ModelContext?
     private var currentSyncTask: Task<Void, Never>?
-    
-    init(list: Account) {
+    private let sharing: any SharingProviding
+    private let identity: any UserIdentityProviding
+
+    init(
+        list: Account,
+        sharing: any SharingProviding = SharingManager.shared,
+        identity: any UserIdentityProviding = UserIdentityService.shared
+    ) {
         self.list = list
+        self.sharing = sharing
+        self.identity = identity
     }
-    
+
     func attach(context: ModelContext) {
         self.modelContext = context
     }
-    
+
     var bannerText: LocalizedStringKey {
-        UserIdentityService.shared.isCurrentUserOwner(of: list)
+        identity.isCurrentUserOwner(of: list)
         ? "Вы делитесь этим бюджетом"
         : "Доступно вам по приглашению"
     }
@@ -133,16 +141,16 @@ final class ListDetailViewModel: ObservableObject {
     }
     
     func presentSharing() {
-        guard SharingManager.shared.isSharingAvailable else {
+        guard sharing.isSharingAvailable else {
             errorMessage = "iCloud недоступен. Войдите в iCloud в настройках."
             showingError = true
             return
         }
-        
+
         Task {
             guard let context = modelContext else { return }
             do {
-                let (share, container) = try await SharingManager.shared.fetchOrCreateShare(
+                let (share, container) = try await sharing.fetchOrCreateShare(
                     for: list, context: context
                 )
                 activeShare = share
@@ -163,38 +171,38 @@ final class ListDetailViewModel: ObservableObject {
         
         if list.isShared {
             Task {
-                try? await SharingManager.shared.pushItem(item, for: list)
+                try? await sharing.pushItem(item, for: list)
             }
         }
     }
-    
+
     func saveEditedItem() {
         guard let context = modelContext else { return }
         try? context.save()
-        
+
         if list.isShared, let item = editingTransaction {
             Task {
-                try? await SharingManager.shared.pushItem(item, for: list)
+                try? await sharing.pushItem(item, for: list)
             }
         }
     }
-    
+
     func deleteItem(_ item: Transaction) {
         guard let context = modelContext else { return }
         context.delete(item)
         try? context.save()
-        
+
         if list.isShared {
             Task {
-                try? await SharingManager.shared.removeItem(item, for: list)
+                try? await sharing.removeItem(item, for: list)
             }
         }
     }
-    
+
     func leaveList() {
         guard let context = modelContext else { return }
         Task {
-            try? await SharingManager.shared.leaveSharedList(list, context: context)
+            try? await sharing.leaveSharedList(list, context: context)
         }
     }
     
@@ -219,7 +227,7 @@ final class ListDetailViewModel: ObservableObject {
         isSyncing = true
         defer { isSyncing = false }
         do {
-            try await SharingManager.shared.syncItems(for: list, context: context)
+            try await sharing.syncItems(for: list, context: context)
         } catch {
             errorMessage = "Не удалось синхронизировать: \(error.localizedDescription)"
             showingError = true

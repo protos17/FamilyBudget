@@ -8,6 +8,14 @@
 import Foundation
 import UserNotifications
 
+/// Protocol for dependency injection in tests
+@MainActor
+protocol NotificationScheduling {
+    func requestAuthorization() async -> Bool
+    func scheduleDailyReminder(at time: DateComponents)
+    func cancelDailyReminder()
+}
+
 @MainActor
 final class NotificationManager {
     static let shared = NotificationManager()
@@ -58,3 +66,5 @@ final class NotificationManager {
             .removePendingNotificationRequests(withIdentifiers: [dailyReminderIdentifier])
     }
 }
+
+extension NotificationManager: NotificationScheduling {}

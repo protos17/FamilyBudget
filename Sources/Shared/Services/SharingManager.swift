@@ -24,6 +24,21 @@ import CloudKit
 import SwiftData
 import OSLog
 
+/// Protocol for dependency injection in tests
+@MainActor
+protocol SharingProviding {
+    var isSharingAvailable: Bool { get }
+    func fetchOrCreateShare(for list: Account, context: ModelContext) async throws -> (CKShare, CKContainer)
+    func acceptShare(_ metadata: CKShare.Metadata, context: ModelContext) async throws -> Account
+    func stopSharing(_ list: Account, context: ModelContext) async throws
+    func leaveSharedList(_ list: Account, context: ModelContext) async throws
+    func pushItem(_ item: Transaction, for list: Account) async throws
+    func removeItem(_ item: Transaction, for list: Account) async throws
+    func syncItems(for list: Account, context: ModelContext) async throws
+    func checkForEndedSharing(in lists: [Account], context: ModelContext) async
+    func discoverSharedZones(context: ModelContext) async
+}
+
 @Observable
 @MainActor
 final class SharingManager {
@@ -861,6 +876,7 @@ extension SharingManager {
     }
 }
 
+extension SharingManager: SharingProviding {}
 
 // MARK: - Errors
 
