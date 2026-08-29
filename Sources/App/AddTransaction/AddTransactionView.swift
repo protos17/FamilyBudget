@@ -16,6 +16,7 @@ struct AddTransactionView: View {
         account: Account,
         prefilledType: TransactionType,
         editingTransaction: Transaction?,
+        recognizedData: RecognizedTransactionData? = nil,
         onSaveNew: @escaping (Transaction) -> Void,
         onSaveEdit: @escaping () -> Void
     ) {
@@ -24,6 +25,7 @@ struct AddTransactionView: View {
                 account: account,
                 prefilledType: prefilledType,
                 editingTransaction: editingTransaction,
+                recognizedData: recognizedData,
                 onSaveNew: onSaveNew,
                 onSaveEdit: onSaveEdit
             )

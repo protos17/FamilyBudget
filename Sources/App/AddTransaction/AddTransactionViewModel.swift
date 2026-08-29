@@ -31,6 +31,7 @@ final class AddTransactionViewModel: ObservableObject {
         account: Account,
         prefilledType: TransactionType,
         editingTransaction: Transaction?,
+        recognizedData: RecognizedTransactionData? = nil,
         onSaveNew: @escaping (Transaction) -> Void,
         onSaveEdit: @escaping () -> Void
     ) {
@@ -47,6 +48,18 @@ final class AddTransactionViewModel: ObservableObject {
             self.selectedCategory = existing.category
             self.note = existing.note ?? ""
             self.paymentMethod = existing.paymentMethod
+        } else if let recognizedData {
+            self.type = prefilledType
+            self.title = recognizedData.title
+            self.amountText = "\(recognizedData.amount)"
+            self.date = recognizedData.parsedDate ?? .now
+            self.selectedCategory = recognizedData.categoryName.flatMap { categoryName in
+                account.sortedCategories.first {
+                    $0.name.localizedCaseInsensitiveCompare(categoryName) == .orderedSame
+                }
+            }
+            self.note = recognizedData.note ?? ""
+            self.paymentMethod = recognizedData.paymentMethod.flatMap(PaymentMethod.init) ?? .other
         } else {
             self.type = prefilledType
             self.title = ""

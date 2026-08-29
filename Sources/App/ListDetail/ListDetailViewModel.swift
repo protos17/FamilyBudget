@@ -27,6 +27,7 @@ final class ListDetailViewModel: ObservableObject {
     @Published var showingAddTransaction = false
     @Published var prefilledType: TransactionType = .expense
     @Published var editingTransaction: Transaction?
+    @Published var recognizedPrefillData: RecognizedTransactionData?
     
     // Month + filters
     @Published var selectedMonth: Date = Calendar.current.startOfMonth(for: .now)
@@ -107,13 +108,22 @@ final class ListDetailViewModel: ObservableObject {
     
     func presentAddTransaction(type: TransactionType) {
         editingTransaction = nil
+        recognizedPrefillData = nil
         prefilledType = type
         showingAddTransaction = true
     }
     
     func presentEditTransaction(_ item: Transaction) {
         editingTransaction = item
+        recognizedPrefillData = nil
         prefilledType = item.type
+        showingAddTransaction = true
+    }
+    
+    func presentAddTransaction(recognized result: RecognizedTransactionData) {
+        editingTransaction = nil
+        recognizedPrefillData = result
+        prefilledType = .expense
         showingAddTransaction = true
     }
     

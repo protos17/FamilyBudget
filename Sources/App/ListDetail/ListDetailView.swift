@@ -25,9 +25,7 @@ struct ListDetailView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectedPhotoData: Data?
     @State private var isRecognizing = false
-    @State private var recognizedResult: RecognizedTransactionData?
-    @State private var showingRecognitionResult = false
-    
+
     private var permissions: PermissionManager { .shared }
     
     init(list: Account) {
@@ -169,6 +167,7 @@ struct ListDetailView: View {
                 account: list,
                 prefilledType: viewModel.prefilledType,
                 editingTransaction: viewModel.editingTransaction,
+                recognizedData: viewModel.recognizedPrefillData,
                 onSaveNew: { newItem in
                     viewModel.saveNewItem(newItem)
                 },
@@ -254,33 +253,8 @@ struct ListDetailView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isRecognizing)
-        .confirmationDialog(
-            "Распознано",
-            isPresented: $showingRecognitionResult,
-            titleVisibility: .visible
-        ) {
-            Button("Сохранить") {
-                if let result = recognizedResult {
-                    saveRecognizedTransaction(result)
-                }
-                recognizedResult = nil
-            }
-            Button("Отмена", role: .cancel) {
-                recognizedResult = nil
-            }
-        } message: {
-            Text(recognitionSummary)
-        }
     }
 
-    private var recognitionSummary: String {
-        guard let result = recognizedResult else { return "" }
-        let categoryName = result.categoryName ?? "без категории"
-        let amount = Decimal(result.amount).formattedAsCurrency(code: list.currencyCode)
-        let date = result.parsedDate.map(DateHelper.getFormattedDate) ?? ""
-        return "\(result.title) · \n\(amount) · \nКатегория - \(categoryName) · \n\(date)"
-    }
-    
     private func dateHeader(for date: Date) -> some View {
         let calendar = Calendar.current
         let isToday = calendar.isDateInToday(date)
@@ -475,8 +449,7 @@ struct ListDetailView: View {
                 imageData: data,
                 expenseCategoryNames: expenseCategories.map(\.name)
             )
-            recognizedResult = result
-            showingRecognitionResult = true
+            viewModel.presentAddTransaction(recognized: result)
         } catch {
             viewModel.errorMessage = error.localizedDescription
             viewModel.showingError = true
@@ -484,34 +457,6 @@ struct ListDetailView: View {
             UserDefaults.standard.set(false, forKey: "isAIConnectionValid")
             NotificationCenter.default.post(name: GlobalSettingsViewModel.connectionInvalidatedNotification, object: nil)
         }
-    }
-
-    // MARK: - Save Recognized Transaction
-    
-    private func saveRecognizedTransaction(_ result: RecognizedTransactionData) {
-        let amountMinorUnits = Int((result.amount * 100).rounded())
-        
-        let transaction = Transaction(
-            title: result.title,
-            amountMinorUnits: amountMinorUnits,
-            type: .expense,
-            date: result.parsedDate ?? .now,
-            createdByUserID: UserIdentityService.shared.currentUserID
-        )
-        
-        if let categoryName = result.categoryName {
-            transaction.category = list.sortedCategories.first {
-                $0.name.localizedCaseInsensitiveCompare(categoryName) == .orderedSame
-            }
-        }
-        
-        if let pm = result.paymentMethod {
-            transaction.paymentMethod = PaymentMethod(rawValue: pm) ?? .other
-        }
-        
-        transaction.note = result.note
-        
-        viewModel.saveNewItem(transaction)
     }
 }
 
