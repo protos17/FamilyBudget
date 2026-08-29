@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct CategoryListView: View {
     @StateObject private var viewModel: CategoryListViewModel
