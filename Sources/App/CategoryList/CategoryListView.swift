@@ -8,14 +8,16 @@
 import SwiftUI
 
 struct CategoryListView: View {
-    let account: Account
+    @StateObject private var viewModel: CategoryListViewModel
     @Environment(\.modelContext) private var modelContext
-    @State private var editingCategory: Category?
-    @State private var showingCreate = false
-    
+
+    init(account: Account) {
+        _viewModel = StateObject(wrappedValue: CategoryListViewModel(account: account))
+    }
+
     var body: some View {
         List {
-            ForEach(account.sortedCategories) { category in
+            ForEach(viewModel.categories) { category in
                 HStack {
                     Image(systemName: category.icon)
                         .foregroundStyle(Color(hex: category.colorHex))
@@ -23,10 +25,10 @@ struct CategoryListView: View {
                     Text(category.name)
                 }
                 .contentShape(Rectangle())
-                .onTapGesture { editingCategory = category }
+                .onTapGesture { viewModel.editingCategory = category }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
-                        deleteCategory(category)
+                        viewModel.deleteCategory(category)
                     } label: {
                         Label("Удалить", systemImage: "trash")
                     }
@@ -37,30 +39,25 @@ struct CategoryListView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    showingCreate = true
+                    viewModel.showingCreate = true
                 } label: {
                     Image(systemName: "plus")
                 }
             }
         }
-        .sheet(isPresented: $showingCreate) {
-            CreateCategoryView(account: account, kind: .universal, onSave: { _ in })
+        .sheet(isPresented: $viewModel.showingCreate) {
+            CreateCategoryView(account: viewModel.account, kind: .universal, onSave: { _ in })
         }
-        .sheet(item: $editingCategory) { category in
+        .sheet(item: $viewModel.editingCategory) { category in
             CreateCategoryView(
-                account: account,
+                account: viewModel.account,
                 kind: category.kind,
                 editingCategory: category,
                 onSave: { _ in }
             )
         }
-    }
-    
-    private func deleteCategory(_ category: Category) {
-        DispatchQueue.main.async {
-            modelContext.delete(category)
-            try? modelContext.save()
+        .onAppear {
+            viewModel.attach(context: modelContext)
         }
     }
-
 }
