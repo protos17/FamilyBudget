@@ -22,9 +22,9 @@ struct CloudSharingView: UIViewControllerRepresentable {
     let context: ModelContext
     let container: CKContainer
     let share: CKShare
-    
+
     func makeUIViewController(context: Context) -> UICloudSharingController {
-        let controller = UICloudSharingController(share: share, container: container)
+        let controller = UICloudSharingController(share: share, container: self.container)
         controller.delegate = context.coordinator
         // Demo permission model supports owner/member write access only.
         // Avoid exposing read-only participant mode until app permissions
@@ -33,66 +33,41 @@ struct CloudSharingView: UIViewControllerRepresentable {
         controller.modalPresentationStyle = .formSheet
         return controller
     }
-    
+
     func updateUIViewController(_ uiViewController: UICloudSharingController, context: Context) {}
-    
+
     func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+        Coordinator(viewModel: CloudSharingViewModel(list: list, context: context))
     }
-    
+
     class Coordinator: NSObject, UICloudSharingControllerDelegate {
-        let parent: CloudSharingView
-        
-        init(_ parent: CloudSharingView) {
-            self.parent = parent
+        let viewModel: CloudSharingViewModel
+
+        init(viewModel: CloudSharingViewModel) {
+            self.viewModel = viewModel
         }
-        
+
         func cloudSharingController(
             _ csc: UICloudSharingController,
             failedToSaveShareWithError error: Error
         ) {
             // Error is shown by UICloudSharingController
         }
-        
+
         func itemTitle(for csc: UICloudSharingController) -> String? {
-            parent.list.name
+            viewModel.itemTitle
         }
-        
+
         func itemThumbnailData(for csc: UICloudSharingController) -> Data? {
-            // Generate a thumbnail with the list's icon and color
-            let size = CGSize(width: 120, height: 120)
-            let color = UIColor(Color(hex: parent.list.colorHex))
-            
-            let renderer = UIGraphicsImageRenderer(size: size)
-            let image = renderer.image { ctx in
-                let rect = CGRect(origin: .zero, size: size)
-                UIBezierPath(roundedRect: rect, cornerRadius: 24).addClip()
-                color.setFill()
-                ctx.fill(rect)
-                
-                let config = UIImage.SymbolConfiguration(pointSize: 48, weight: .medium)
-                if let symbol = UIImage(systemName: parent.list.icon, withConfiguration: config) {
-                    let tinted = symbol.withTintColor(.white, renderingMode: .alwaysOriginal)
-                    let origin = CGPoint(
-                        x: (size.width - tinted.size.width) / 2,
-                        y: (size.height - tinted.size.height) / 2
-                    )
-                    tinted.draw(at: origin)
-                }
-            }
-            return image.pngData()
+            viewModel.itemThumbnailData()
         }
-        
+
         func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
             Task { @MainActor in
-                do {
-                    try await SharingManager.shared.stopSharing(parent.list, context: parent.context)
-                } catch {
-                    // Silently fail — user can retry from the menu
-                }
+                await viewModel.stopSharing()
             }
         }
-        
+
         func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {}
     }
 }
