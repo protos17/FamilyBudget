@@ -17,6 +17,7 @@ struct ListDetailView: View {
     @Query private var allItems: [Transaction]
     
     @StateObject private var viewModel: ListDetailViewModel
+    @Environment(\.locale) private var locale
     
     @AppStorage("isAIConnectionValid") private var isAIConnectionValid = false
     @AppStorage("isAIEnabled") private var isAIEnabled = false
@@ -263,13 +264,13 @@ struct ListDetailView: View {
         
         let text: String
         if isToday {
-            text = "Сегодня"
+            text = String(localized: "Сегодня")
         } else if isYesterday {
-            text = "Вчера"
+            text = String(localized: "Вчера")
         } else if isThisWeek {
             let formatter = RelativeDateTimeFormatter()
             formatter.unitsStyle = .full
-            formatter.locale = Locale(identifier: "ru_RU")
+            formatter.locale = locale
             text = formatter.localizedString(for: date, relativeTo: .now)
         } else {
             text = DateHelper.getFormattedDate(from: date)

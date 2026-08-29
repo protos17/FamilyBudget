@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "ru",
   "strings" : {
+    "" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "· %@" : {
       "localizations" : {
         "en" : {
@@ -104,7 +114,6 @@
       }
     },
     "0" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -154,6 +163,26 @@
         }
       }
     },
+    "gpt-4o" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "gpt-4o"
+          }
+        }
+      }
+    },
+    "https://api.openai.com/v1" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "https://api.openai.com/v1"
+          }
+        }
+      }
+    },
     "iCloud недоступен" : {
       "localizations" : {
         "en" : {
@@ -175,7 +204,6 @@
       }
     },
     "OK" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -206,6 +234,16 @@
         }
       }
     },
+    "sk-..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "sk-..."
+          }
+        }
+      }
+    },
     "USD — $" : {
       "localizations" : {
         "en" : {
@@ -228,7 +266,6 @@
       }
     },
     "Баланс" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -258,8 +295,17 @@
         }
       }
     },
+    "Бюджет добавлен" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Budget Added"
+          }
+        }
+      }
+    },
     "Бюджеты" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -280,6 +326,16 @@
         }
       }
     },
+    "В какой бюджет добавить операцию?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Which budget should this transaction be added to?"
+          }
+        }
+      }
+    },
     "Валюта" : {
       "localizations" : {
         "en" : {
@@ -291,7 +347,6 @@
       }
     },
     "Введите корректную сумму" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -322,6 +377,16 @@
         }
       }
     },
+    "Включить" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Enable"
+          }
+        }
+      }
+    },
     "Внешний вид" : {
       "localizations" : {
         "en" : {
@@ -343,7 +408,6 @@
       }
     },
     "Время напоминания" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -354,7 +418,6 @@
       }
     },
     "Все категории" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -375,7 +438,6 @@
       }
     },
     "Все типы" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -385,8 +447,17 @@
         }
       }
     },
+    "Вчера" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Yesterday"
+          }
+        }
+      }
+    },
     "Вы делитесь этим бюджетом" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -427,7 +498,6 @@
       }
     },
     "Выберите иконку" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -438,7 +508,6 @@
       }
     },
     "Готово" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -449,7 +518,6 @@
       }
     },
     "Далее" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -470,7 +538,6 @@
       }
     },
     "Дата" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -491,8 +558,17 @@
         }
       }
     },
+    "Добавьте хотя бы одну операцию перед тем, как поделиться бюджетом" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Add at least one transaction before sharing the budget"
+          }
+        }
+      }
+    },
     "Доступ прекращён" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -503,7 +579,6 @@
       }
     },
     "Доступно вам по приглашению" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -564,7 +639,6 @@
       }
     },
     "Заметка" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -575,7 +649,6 @@
       }
     },
     "Заметка (необязательно)" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -596,7 +669,6 @@
       }
     },
     "Иконка" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -617,7 +689,6 @@
       }
     },
     "Категории" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -648,8 +719,17 @@
         }
       }
     },
+    "Копия бюджета" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Budget Copy"
+          }
+        }
+      }
+    },
     "Кто добавил" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -690,7 +770,6 @@
       }
     },
     "Название бюджета" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -701,7 +780,6 @@
       }
     },
     "Название категории" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -722,7 +800,6 @@
       }
     },
     "Написать в поддержку" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -733,7 +810,6 @@
       }
     },
     "Напоминания о бюджете" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -744,7 +820,6 @@
       }
     },
     "Настройки" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -755,7 +830,6 @@
       }
     },
     "Настройки бюджета" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -766,7 +840,6 @@
       }
     },
     "Начать" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -777,7 +850,6 @@
       }
     },
     "Не удалось создать файл" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -788,7 +860,6 @@
       }
     },
     "Нет бюджетов" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -799,7 +870,6 @@
       }
     },
     "Нет операций" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -810,7 +880,6 @@
       }
     },
     "Нет расходов" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -821,7 +890,6 @@
       }
     },
     "Новая категория" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -842,7 +910,6 @@
       }
     },
     "Новый доход" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -853,7 +920,6 @@
       }
     },
     "Новый расход" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -874,7 +940,6 @@
       }
     },
     "Общий доступ" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -896,7 +961,6 @@
       }
     },
     "Открыть настройки" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -907,7 +971,6 @@
       }
     },
     "Отмена" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -918,7 +981,6 @@
       }
     },
     "Ошибка" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -934,6 +996,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Transfer"
+          }
+        }
+      }
+    },
+    "Подключение к бюджету..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Connecting to budget…"
           }
         }
       }
@@ -970,7 +1042,6 @@
       }
     },
     "Показать все" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -981,7 +1052,6 @@
       }
     },
     "Покинуть" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -992,7 +1062,6 @@
       }
     },
     "Покинуть \"%@\"?" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1003,7 +1072,6 @@
       }
     },
     "Покинуть бюджет" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1014,7 +1082,6 @@
       }
     },
     "Политика конфиденциальности" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1036,7 +1103,6 @@
       }
     },
     "Пригласить участника" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1067,12 +1133,21 @@
       }
     },
     "Пропустить" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Skip"
+          }
+        }
+      }
+    },
+    "Распознано" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Recognized"
           }
         }
       }
@@ -1118,7 +1193,6 @@
       }
     },
     "Редактировать" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1129,7 +1203,6 @@
       }
     },
     "Редактировать бюджет" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1140,7 +1213,6 @@
       }
     },
     "Редактировать категорию" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1160,6 +1232,16 @@
         }
       }
     },
+    "Сегодня" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Today"
+          }
+        }
+      }
+    },
     "Системная" : {
       "localizations" : {
         "en" : {
@@ -1170,8 +1252,17 @@
         }
       }
     },
+    "Скопировать" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Duplicate"
+          }
+        }
+      }
+    },
     "Скрыть" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1192,7 +1283,6 @@
       }
     },
     "Создать" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1203,7 +1293,6 @@
       }
     },
     "Сохранить" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1214,7 +1303,6 @@
       }
     },
     "Способ оплаты" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1235,7 +1323,6 @@
       }
     },
     "Тема" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1286,7 +1373,6 @@
       }
     },
     "Уведомления отключены" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1297,7 +1383,6 @@
       }
     },
     "Удалить" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1308,7 +1393,6 @@
       }
     },
     "Удалить \"%@\"?" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1319,7 +1403,6 @@
       }
     },
     "Удалить бюджет" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1330,7 +1413,6 @@
       }
     },
     "Удалить всё" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1341,7 +1423,6 @@
       }
     },
     "Удалить все операции" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1352,7 +1433,6 @@
       }
     },
     "Удалить все операции?" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1363,7 +1443,6 @@
       }
     },
     "Управление категориями" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1374,7 +1453,6 @@
       }
     },
     "Управление участниками" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1385,7 +1463,6 @@
       }
     },
     "Цвет" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1417,7 +1494,6 @@
       }
     },
     "Экспортировать в CSV" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1448,7 +1524,6 @@
       }
     },
     "Язык" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

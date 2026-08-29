@@ -144,12 +144,6 @@ struct SettingsView: View {
         }
         .navigationTitle("Настройки")
         .scrollDismissesKeyboard(.interactively)
-        .onTapGesture {
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder),
-                to: nil, from: nil, for: nil
-            )
-        }
     }
 
     // MARK: - Connection Button
