@@ -201,7 +201,8 @@ struct RecognizedTransactionData: Codable {
         for format in formatsToTry {
             formatter.dateFormat = format
             if let parsed = formatter.date(from: date) {
-                return parsed
+                let yearsDiff = abs(Calendar.current.dateComponents([.year], from: parsed, to: .now).year ?? 0)
+                return yearsDiff > 100 ? nil : parsed
             }
         }
         return nil

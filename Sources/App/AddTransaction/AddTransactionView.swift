@@ -80,6 +80,7 @@ struct AddTransactionView: View {
                     }
                     
                     DatePicker("Дата", selection: $viewModel.date, displayedComponents: [.date, .hourAndMinute])
+                        .datePickerStyle(.compact)
                     
                     Picker("Способ оплаты", selection: $viewModel.paymentMethod) {
                         Text("Карта").tag(PaymentMethod.card)
