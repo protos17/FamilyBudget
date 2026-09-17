@@ -21,6 +21,7 @@ struct ListDetailView: View {
     
     @AppStorage("isAIConnectionValid") private var isAIConnectionValid = false
     @AppStorage("isAIEnabled") private var isAIEnabled = false
+    @AppStorage("aiEngine") private var aiEngineRaw = AIRecognitionEngine.appleIntelligence.rawValue
     
     @State private var showingPhotoPicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -61,7 +62,11 @@ struct ListDetailView: View {
     }
     
     private var canUseAIRecognition: Bool {
-        isAIEnabled && isAIConnectionValid
+        guard isAIEnabled else { return false }
+        if aiEngineRaw == AIRecognitionEngine.appleIntelligence.rawValue {
+            return AIRecognitionEngine.isCurrentEngineAvailable
+        }
+        return isAIConnectionValid
     }
     
     var body: some View {

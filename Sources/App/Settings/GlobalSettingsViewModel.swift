@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import FoundationModels
 
 @MainActor
 final class GlobalSettingsViewModel: ObservableObject {
@@ -25,7 +26,7 @@ final class GlobalSettingsViewModel: ObservableObject {
 
     @Published var showingPermissionDeniedAlert = false
 
-    // MARK: - AI / OpenAI-compatible API
+    // MARK: - AI / Provider Settings
 
     private static let aiAPIKeychainKey = "aiAPIKey"
 
@@ -47,18 +48,33 @@ final class GlobalSettingsViewModel: ObservableObject {
     @Published var isAIEnabled: Bool {
         didSet {
             store.set(isAIEnabled, forKey: "isAIEnabled")
-            // Сбрасываем статус подключения при выключении
             if !isAIEnabled {
                 store.set(false, forKey: "isAIConnectionValid")
                 connectionStatus = .idle
+            } else if aiEngine == .appleIntelligence {
+                store.set(SystemLanguageModel.default.isAvailable, forKey: "isAIConnectionValid")
             }
         }
+    }
+
+    @Published var aiEngine: AIRecognitionEngine {
+        didSet {
+            store.set(aiEngine.rawValue, forKey: "aiEngine")
+            if isAIEnabled && aiEngine == .appleIntelligence {
+                store.set(SystemLanguageModel.default.isAvailable, forKey: "isAIConnectionValid")
+            } else if aiEngine == .openAI {
+                store.set(connectionStatus == .success, forKey: "isAIConnectionValid")
+            }
+        }
+    }
+
+    var isAppleIntelligenceAvailable: Bool {
+        SystemLanguageModel.default.isAvailable
     }
 
     @Published var aiBaseURL: String {
         didSet {
             store.set(aiBaseURL, forKey: "aiBaseURL")
-            // Сбрасываем статус при изменении URL
             store.set(false, forKey: "isAIConnectionValid")
             connectionStatus = .idle
             availableModels = []
@@ -72,7 +88,6 @@ final class GlobalSettingsViewModel: ObservableObject {
             } else {
                 secureStore.save(aiAPIKey, forKey: Self.aiAPIKeychainKey)
             }
-            // Сбрасываем статус при изменении ключа
             store.set(false, forKey: "isAIConnectionValid")
             connectionStatus = .idle
             availableModels = []
@@ -112,10 +127,16 @@ final class GlobalSettingsViewModel: ObservableObject {
         self.reminderTime = (store.object(forKey: "reminderTime") as? Date)
             ?? Calendar.current.date(bySettingHour: 20, minute: 0, second: 0, of: .now) ?? .now
         self.isAIEnabled = store.bool(forKey: "isAIEnabled")
+        let engineRaw = store.string(forKey: "aiEngine") ?? AIRecognitionEngine.appleIntelligence.rawValue
+        self.aiEngine = AIRecognitionEngine(rawValue: engineRaw) ?? .appleIntelligence
         self.aiBaseURL = store.string(forKey: "aiBaseURL") ?? "https://api.openai.com/v1"
         self.aiAPIKey = secureStore.load(forKey: Self.aiAPIKeychainKey) ?? ""
         self.aiModel = store.string(forKey: "aiModel") ?? "gpt-4o"
         self.availableModels = store.stringArray(forKey: "aiAvailableModels") ?? []
+
+        if isAIEnabled && aiEngine == .appleIntelligence {
+            store.set(SystemLanguageModel.default.isAvailable, forKey: "isAIConnectionValid")
+        }
 
         if remindersEnabled {
             scheduleReminder()

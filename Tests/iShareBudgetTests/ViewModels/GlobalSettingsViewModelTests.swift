@@ -22,6 +22,7 @@ struct GlobalSettingsViewModelTests {
 
         #expect(viewModel.remindersEnabled == false)
         #expect(viewModel.isAIEnabled == false)
+        #expect(viewModel.aiEngine == .appleIntelligence)
         #expect(viewModel.aiBaseURL == "https://api.openai.com/v1")
         #expect(viewModel.aiModel == "gpt-4o")
         #expect(viewModel.aiAPIKey == "")
@@ -37,6 +38,7 @@ struct GlobalSettingsViewModelTests {
         let store = InMemoryKeyValueStore(seed: [
             "remindersEnabled": true,
             "isAIEnabled": true,
+            "aiEngine": "openAI",
             "aiBaseURL": "https://example.com/v1",
             "aiModel": "custom-model",
             "aiAvailableModels": ["a", "b"]
@@ -47,10 +49,23 @@ struct GlobalSettingsViewModelTests {
 
         #expect(viewModel.remindersEnabled == true)
         #expect(viewModel.isAIEnabled == true)
+        #expect(viewModel.aiEngine == .openAI)
         #expect(viewModel.aiBaseURL == "https://example.com/v1")
         #expect(viewModel.aiModel == "custom-model")
         #expect(viewModel.aiAPIKey == "secret-key")
         #expect(viewModel.availableModels == ["a", "b"])
+    }
+
+    @Test("switching aiEngine persists the new value")
+    func switchingAIEnginePersists() {
+        let store = InMemoryKeyValueStore()
+        let viewModel = makeViewModel(store: store)
+
+        viewModel.aiEngine = .openAI
+        #expect(store.string(forKey: "aiEngine") == "openAI")
+
+        viewModel.aiEngine = .appleIntelligence
+        #expect(store.string(forKey: "aiEngine") == "appleIntelligence")
     }
 
     // MARK: - AI toggles

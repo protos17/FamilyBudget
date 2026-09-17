@@ -1,16 +1,156 @@
-//
-//  AIReceiptRecognizer.swift
-//  FamilyBudget
-//
-//  Shared OpenAI-compatible vision API call for recognizing a receipt/photo
-//  into transaction fields. Used both by the in-app "Распознать по фото"
-//  flow and by the Share Extension import flow.
-//
-
 import UIKit
+import FoundationModels
+
+// MARK: - Выбор движка распознавания
+
+enum AIRecognitionEngine: String, CaseIterable, Identifiable {
+    case appleIntelligence = "appleIntelligence"
+    case openAI = "openAI"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .appleIntelligence:
+            return String(localized: "Apple Intelligence")
+        case .openAI:
+            return String(localized: "OpenAI-совместимый API")
+        }
+    }
+
+    static var current: AIRecognitionEngine {
+        AIRecognitionEngine(rawValue: UserDefaults.standard.string(forKey: "aiEngine") ?? "") ?? .appleIntelligence
+    }
+
+    static var isCurrentEngineAvailable: Bool {
+        switch current {
+        case .appleIntelligence:
+            return SystemLanguageModel.default.isAvailable
+        case .openAI:
+            return UserDefaults.standard.bool(forKey: "isAIConnectionValid")
+        }
+    }
+}
+
+// MARK: - AIReceiptRecognizer
 
 enum AIReceiptRecognizer {
+
+    // MARK: - Prompts
+
+    enum PromptTemplates {
+        /// Unified system instructions in English for expense receipt and transaction recognition.
+        static func systemInstructions(availableCategories: [String]) -> String {
+            let categoryList = availableCategories.isEmpty ? "None" : availableCategories.joined(separator: ", ")
+            return """
+            You are an expert financial assistant specialized in recognizing expense transactions from photos of receipts, invoices, payment screens, or products/services.
+            Extract details of a single expense transaction strictly following the schema.
+
+            Available categories: [\(categoryList)]
+
+            Rules:
+            - title: Concise description of the purchase or merchant/store name (e.g. "Groceries", "Coffee", "Taxi"). Keep original merchant language if applicable.
+            - amount: Positive expense amount in standard currency units (e.g. 350.50, not cents).
+            - categoryName: The most suitable category name selected ONLY from the available categories list above, or null if none fit.
+            - paymentMethod: One of "card", "cash", "transfer", "other".
+            - date: OPTIONAL. Date of the transaction from the receipt in "dd-MM-yyyy" or "dd-MM-yyyy HH:mm" format. If the date is missing, blurry, unreadable, or not present on the receipt, leave date as null. A missing date is completely normal and acceptable. NEVER treat a missing date as an error or failure!
+            - note: Additional details or null.
+            - recognitionError: ONLY populate this field if the image does NOT contain any receipt, bill, or financial transaction at all, or if the amount and title are completely illegible. You MUST NEVER set recognitionError or fail recognition just because the date cannot be found or is unclear.
+            """
+        }
+
+        /// OpenAI-specific system prompt extending system instructions with strict JSON format schema.
+        static func openAISystemPrompt(availableCategories: [String]) -> String {
+            """
+            \(systemInstructions(availableCategories: availableCategories))
+
+            Return STRICTLY a single valid JSON object without markdown formatting, without ```json wrappers, and without any explanatory text, matching the schema:
+            {
+              "title": "string",
+              "amount": 0.0,
+              "categoryName": "string or null",
+              "paymentMethod": "card|cash|transfer|other",
+              "date": "dd-MM-yyyy or null",
+              "note": "string or null"
+            }
+
+            CRITICAL INSTRUCTIONS:
+            - The "date" field is strictly OPTIONAL. If the date is not found or not clearly visible, return "date": null.
+            - Do NOT return an error just because the date is missing.
+            - Only return JSON: {"error": "reason description"} if the image contains NO financial transaction or purchase whatsoever.
+            """
+        }
+
+        /// Shared user prompt for both Apple Intelligence and external OpenAI-compatible models.
+        static let userPrompt = "Recognize the expense transaction from this receipt image."
+    }
+
+    // MARK: - Recognition Entry Point
+
     static func recognize(imageData: Data, expenseCategoryNames: [String]) async throws -> RecognizedTransactionData {
+        switch AIRecognitionEngine.current {
+        case .appleIntelligence:
+            return try await recognizeViaAppleIntelligence(imageData: imageData, expenseCategoryNames: expenseCategoryNames)
+        case .openAI:
+            return try await recognizeViaOpenAICompatibleAPI(imageData: imageData, expenseCategoryNames: expenseCategoryNames)
+        }
+    }
+
+    // MARK: - Apple Intelligence (iOS 27 FoundationModels)
+
+    private static func recognizeViaAppleIntelligence(
+        imageData: Data,
+        expenseCategoryNames: [String]
+    ) async throws -> RecognizedTransactionData {
+        let systemModel = SystemLanguageModel.default
+        guard systemModel.isAvailable else {
+            throw RecognitionError.appleIntelligenceUnavailable
+        }
+
+        guard let image = UIImage(data: imageData) else {
+            throw RecognitionError.invalidResponse
+        }
+
+        let instructions = PromptTemplates.systemInstructions(availableCategories: expenseCategoryNames)
+        let session = LanguageModelSession(model: systemModel, instructions: instructions)
+
+        do {
+            let response = try await session.respond(generating: RecognizedTransactionData.self) {
+                PromptTemplates.userPrompt
+                Attachment(image)
+            }
+
+            let content = response.content
+            if let errorMessage = content.recognitionError, !errorMessage.isEmpty {
+                // Если название и сумма успешно распознаны, или ошибка касается только даты —
+                // не прерываем распознавание, дата полностью опциональна.
+                let hasValidTransaction = content.amount > 0 && !content.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let isDateError = errorMessage.localizedCaseInsensitiveContains("date") ||
+                                  errorMessage.localizedCaseInsensitiveContains("дат")
+
+                if !hasValidTransaction && !isDateError {
+                    throw RecognitionError.recognitionFailed(errorMessage)
+                }
+            }
+            return content
+        } catch let error as RecognitionError {
+            throw error
+        } catch SystemLanguageModel.Error.assetsUnavailable {
+            throw RecognitionError.appleIntelligenceUnavailable
+        } catch {
+            #if DEBUG
+            print("AIReceiptRecognizer Apple Intelligence error: \(error)")
+            #endif
+            throw RecognitionError.apiError(statusCode: -1, message: error.localizedDescription)
+        }
+    }
+
+    // MARK: - OpenAI-совместимый эндпоинт (HTTP)
+
+    private static func recognizeViaOpenAICompatibleAPI(
+        imageData: Data,
+        expenseCategoryNames: [String]
+    ) async throws -> RecognizedTransactionData {
         let baseURL = UserDefaults.standard.string(forKey: "aiBaseURL") ?? "https://api.openai.com/v1"
         guard let apiKey = KeychainHelper.load(forKey: "aiAPIKey"), !apiKey.isEmpty else {
             throw RecognitionError.noAPIKey
@@ -25,31 +165,8 @@ enum AIReceiptRecognizer {
         let compressedData = compressImage(imageData) ?? imageData
         let base64 = compressedData.base64EncodedString()
 
-        let categoryNames = expenseCategoryNames.joined(separator: ", ")
+        let systemPrompt = PromptTemplates.openAISystemPrompt(availableCategories: expenseCategoryNames)
 
-        let systemPrompt = """
-        Ты — помощник для распознавания финансовых операций по фото. \
-        Проанализируй изображение (чек, скриншот оплаты, фото товара или услуги) \
-        и извлеки данные об одной операции расхода.
-
-        Доступные категории: [\(categoryNames)]
-
-        Верни СТРОГО ТОЛЬКО JSON-объект, без markdown-разметки, без ```json, без пояснений, \
-        со следующими полями:
-        - "title": краткое описание операции (например "Кофе", "Продукты", "Такси")
-        - "amount": сумма расхода как положительное число в основных единицах валюты (например 350.50, не в копейках)
-        - "categoryName": название наиболее подходящей категории ТОЛЬКО из списка доступных (строка или null, если ни одна не подходит)
-        - "paymentMethod": один из "card", "cash", "transfer", "other" (строка)
-        - "date": дата операции с чека в формате "dd-MM-yyyy" (или "dd-MM-yyyy HH:mm", если видно время). \
-            Если дата на чеке не найдена, верни null — НЕ подставляй сегодняшнюю дату сам.
-        - "note": дополнительная информация или null
-
-        Если на фото невозможно распознать финансовую операцию, верни JSON: {"error": "описание причины"}.
-        """
-
-        // Локальные OpenAI-совместимые серверы (LM Studio, llama.cpp, Ollama и т.п.)
-        // часто не поддерживают response_format/detail — используем только
-        // базовый набор полей, максимально совместимый с любым сервером.
         let requestBody: [String: Any] = [
             "model": model,
             "messages": [
@@ -57,7 +174,7 @@ enum AIReceiptRecognizer {
                 [
                     "role": "user",
                     "content": [
-                        ["type": "text", "text": "Распознай операцию расхода по этому фото. Верни только JSON, без markdown."],
+                        ["type": "text", "text": PromptTemplates.userPrompt],
                         [
                             "type": "image_url",
                             "image_url": [
@@ -114,13 +231,21 @@ enum AIReceiptRecognizer {
             throw RecognitionError.parseError
         }
 
-        guard let contentData = Self.extractJSONData(from: content) else {
+        guard let contentData = extractJSONData(from: content) else {
             throw RecognitionError.parseError
         }
 
         if let parsed = try? JSONSerialization.jsonObject(with: contentData) as? [String: Any],
            let errorMessage = parsed["error"] as? String {
-            throw RecognitionError.recognitionFailed(errorMessage)
+            let title = parsed["title"] as? String ?? ""
+            let amount = (parsed["amount"] as? NSNumber)?.doubleValue ?? 0
+            let hasValidTransaction = amount > 0 && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let isDateError = errorMessage.localizedCaseInsensitiveContains("date") ||
+                              errorMessage.localizedCaseInsensitiveContains("дат")
+
+            if !hasValidTransaction && !isDateError {
+                throw RecognitionError.recognitionFailed(errorMessage)
+            }
         }
 
         do {
@@ -130,19 +255,17 @@ enum AIReceiptRecognizer {
         }
     }
 
-    /// Локальные модели (например Qwen2.5-VL) часто оборачивают JSON в ```json ... ```
-    /// или добавляют пояснительный текст вокруг него. Эта функция вычленяет
-    /// первый валидный JSON-объект из произвольного текстового ответа.
+    // MARK: - Вспомогательные методы
+
+    /// Извлекает валидный JSON-объект из текста, даже если модель добавила markdown или пояснения.
     private static func extractJSONData(from content: String) -> Data? {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Быстрый путь: весь контент уже является JSON
         if let data = trimmed.data(using: .utf8),
            (try? JSONSerialization.jsonObject(with: data)) != nil {
             return data
         }
 
-        // Ищем содержимое между первой '{' и последней '}'
         if let firstBrace = trimmed.firstIndex(of: "{"),
            let lastBrace = trimmed.lastIndex(of: "}"),
            firstBrace < lastBrace {
@@ -177,30 +300,74 @@ enum AIReceiptRecognizer {
 
 // MARK: - Recognition Data Model
 
+@Generable
 struct RecognizedTransactionData: Codable {
+    @Guide(description: "Short description of the expense or merchant name, e.g. \"Coffee\", \"Groceries\", \"Taxi\"")
     let title: String
+
+    @Guide(description: "Expense amount as a positive number in standard currency units (e.g. 350.50, not cents)")
     let amount: Double
+
+    @Guide(description: "Name of the most suitable category ONLY from the available categories list in the instructions, or null if none fit")
     let categoryName: String?
+
+    @Guide(description: "Payment method", .anyOf(["card", "cash", "transfer", "other"]))
     let paymentMethod: String?
-    /// Дата операции с чека в формате "dd-MM-yyyy" или "dd-MM-yyyy HH:mm".
-    /// Может отсутствовать, если модель не смогла её распознать.
+
+    @Guide(description: "OPTIONAL date from the receipt in dd-MM-yyyy (or dd-MM-yyyy HH:mm). Return null if the date is missing, unreadable, or not clearly visible. A missing date is completely normal and NOT an error.")
     let date: String?
+
+    @Guide(description: "Additional details about the transaction or null")
     let note: String?
 
-    /// Парсит `date` в `Date`. Возвращает `nil`, если поле отсутствует
-    /// или не соответствует ожидаемому формату — в таком случае вызывающий
-    /// код должен сам подставить дефолт (например `.now`).
+    @Guide(description: "Only set this if the image is NOT a receipt or financial transaction at all. Must be null if amount and title are recognized, even when date is absent.")
+    let recognitionError: String?
+
+    init(
+        title: String,
+        amount: Double,
+        categoryName: String? = nil,
+        paymentMethod: String? = nil,
+        date: String? = nil,
+        note: String? = nil,
+        recognitionError: String? = nil
+    ) {
+        self.title = title
+        self.amount = amount
+        self.categoryName = categoryName
+        self.paymentMethod = paymentMethod
+        self.date = date
+        self.note = note
+        self.recognitionError = recognitionError
+    }
+
+    /// Парсит `date` в `Date`, пробуя несколько форматов и отсекая некорректные даты.
     var parsedDate: Date? {
         guard let date, !date.isEmpty else { return nil }
 
-        let formatsToTry = ["dd-MM-yyyy", "dd-MM-yyyy HH:mm", "yyyy-MM-dd"]
+        let trimmed = date.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              !["null", "nil", "none", "unknown", "n/a", "не указана", "не найдена", "отсутствует"].contains(trimmed.lowercased()) else {
+            return nil
+        }
+
+        let formatsToTry = [
+            "dd-MM-yyyy",
+            "dd-MM-yyyy HH:mm",
+            "dd.MM.yyyy",
+            "dd.MM.yyyy HH:mm",
+            "yyyy-MM-dd",
+            "yyyy-MM-dd HH:mm:ss",
+            "dd/MM/yyyy",
+            "dd/MM/yyyy HH:mm"
+        ]
         let formatter = DateFormatter()
-        formatter.locale = Locale.autoupdatingCurrent
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = .current
 
         for format in formatsToTry {
             formatter.dateFormat = format
-            if let parsed = formatter.date(from: date) {
+            if let parsed = formatter.date(from: trimmed) {
                 let yearsDiff = abs(Calendar.current.dateComponents([.year], from: parsed, to: .now).year ?? 0)
                 return yearsDiff > 100 ? nil : parsed
             }
@@ -218,21 +385,24 @@ enum RecognitionError: LocalizedError {
     case apiError(statusCode: Int, message: String)
     case parseError
     case recognitionFailed(String)
+    case appleIntelligenceUnavailable
 
     var errorDescription: String? {
         switch self {
         case .noAPIKey:
-            "API-ключ не настроен. Проверьте настройки ИИ-ассистента."
+            return String(localized: "API-ключ не настроен. Проверьте настройки ИИ-ассистента.")
         case .invalidURL:
-            "Некорректный URL API. Проверьте настройки."
+            return String(localized: "Некорректный URL API. Проверьте настройки.")
         case .invalidResponse:
-            "Некорректный ответ сервера."
+            return String(localized: "Некорректный ответ сервера.")
         case .apiError(let code, let message):
-            "Ошибка API (\(code)): \(message)"
+            return String(localized: "Ошибка API (\(code)): \(message)")
         case .parseError:
-            "Не удалось разобрать ответ ИИ."
+            return String(localized: "Не удалось разобрать ответ ИИ.")
         case .recognitionFailed(let reason):
-            reason
+            return reason
+        case .appleIntelligenceUnavailable:
+            return String(localized: "Apple Intelligence недоступен на этом устройстве. Проверьте настройки системы или выберите внешнего провайдера.")
         }
     }
 }

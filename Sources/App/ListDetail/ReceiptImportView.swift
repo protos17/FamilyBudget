@@ -101,10 +101,10 @@ struct ReceiptImportView: View {
 
     private var recognitionSummary: String {
         guard let result = recognizedResult else { return "" }
-        let categoryName = result.categoryName ?? "без категории"
+        let categoryName = result.categoryName ?? String(localized: "без категории")
         let amount = Decimal(result.amount).formattedAsCurrency(code: selectedAccount?.currencyCode ?? "RUB")
-        let date = result.parsedDate.map(DateHelper.getFormattedDate) ?? ""
-        return "\(result.title) · \n\(amount) · \nКатегория - \(categoryName) · \n\(date)"
+        let dateString = DateHelper.getFormattedDate(from: result.parsedDate ?? .now)
+        return "\(result.title) · \n\(amount) · \nКатегория - \(categoryName) · \n\(dateString)"
     }
 
     // MARK: - Import Flow

@@ -2,6 +2,7 @@
   "sourceLanguage" : "ru",
   "strings" : {
     "" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -114,6 +115,7 @@
       }
     },
     "0" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -153,6 +155,49 @@
         }
       }
     },
+    "API-ключ не настроен. Проверьте настройки ИИ-ассистента." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API key is not configured. Check the AI assistant settings."
+          }
+        }
+      }
+    },
+    "Apple Intelligence" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence"
+          }
+        }
+      }
+    },
+    "Apple Intelligence недоступен на этом устройстве" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence is unavailable on this device"
+          }
+        }
+      }
+    },
+    "Apple Intelligence недоступен на этом устройстве. Проверьте настройки системы или выберите внешнего провайдера." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence is unavailable on this device. Check system settings or select an external provider."
+          }
+        }
+      }
+    },
     "EUR — €" : {
       "localizations" : {
         "en" : {
@@ -164,6 +209,7 @@
       }
     },
     "gpt-4o" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -174,6 +220,7 @@
       }
     },
     "https://api.openai.com/v1" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -204,11 +251,23 @@
       }
     },
     "OK" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
+          }
+        }
+      }
+    },
+    "OpenAI-совместимый API" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenAI-compatible API"
           }
         }
       }
@@ -235,6 +294,7 @@
       }
     },
     "sk-..." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -266,6 +326,7 @@
       }
     },
     "Баланс" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -296,6 +357,7 @@
       }
     },
     "Бюджет добавлен" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -306,6 +368,7 @@
       }
     },
     "Бюджеты" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -327,6 +390,7 @@
       }
     },
     "В какой бюджет добавить операцию?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -347,6 +411,7 @@
       }
     },
     "Введите корректную сумму" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -377,7 +442,18 @@
         }
       }
     },
+    "Включите ИИ-ассистента для автоматического распознавания чеков." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable the AI assistant for automatic receipt recognition."
+          }
+        }
+      }
+    },
     "Включить" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -408,6 +484,7 @@
       }
     },
     "Время напоминания" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -418,6 +495,7 @@
       }
     },
     "Все категории" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -438,6 +516,7 @@
       }
     },
     "Все типы" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -447,7 +526,18 @@
         }
       }
     },
+    "Встроенный Apple Intelligence доступен" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Built-in Apple Intelligence is available"
+          }
+        }
+      }
+    },
     "Вчера" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -458,6 +548,7 @@
       }
     },
     "Вы делитесь этим бюджетом" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -498,6 +589,7 @@
       }
     },
     "Выберите иконку" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -508,6 +600,7 @@
       }
     },
     "Готово" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -518,6 +611,7 @@
       }
     },
     "Далее" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -538,11 +632,23 @@
       }
     },
     "Дата" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Date"
+          }
+        }
+      }
+    },
+    "Движок ИИ" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI Engine"
           }
         }
       }
@@ -559,6 +665,7 @@
       }
     },
     "Добавьте хотя бы одну операцию перед тем, как поделиться бюджетом" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -568,7 +675,19 @@
         }
       }
     },
+    "Доступ запрещён (403)" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Access denied (403)"
+          }
+        }
+      }
+    },
     "Доступ прекращён" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -579,6 +698,7 @@
       }
     },
     "Доступно вам по приглашению" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -639,6 +759,7 @@
       }
     },
     "Заметка" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -649,6 +770,7 @@
       }
     },
     "Заметка (необязательно)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -669,11 +791,22 @@
       }
     },
     "Иконка" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Icon"
+          }
+        }
+      }
+    },
+    "Использует встроенную модель Apple Intelligence для локального распознавания чеков прямо на устройстве." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uses the built-in Apple Intelligence model for local on-device receipt recognition."
           }
         }
       }
@@ -689,6 +822,7 @@
       }
     },
     "Категории" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -720,6 +854,7 @@
       }
     },
     "Копия бюджета" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -730,6 +865,7 @@
       }
     },
     "Кто добавил" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -770,6 +906,7 @@
       }
     },
     "Название бюджета" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -780,6 +917,7 @@
       }
     },
     "Название категории" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -800,6 +938,7 @@
       }
     },
     "Написать в поддержку" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -810,6 +949,7 @@
       }
     },
     "Напоминания о бюджете" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -820,6 +960,7 @@
       }
     },
     "Настройки" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -830,6 +971,7 @@
       }
     },
     "Настройки бюджета" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -840,6 +982,7 @@
       }
     },
     "Начать" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -849,7 +992,19 @@
         }
       }
     },
+    "Не удалось разобрать ответ ИИ." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to parse AI response."
+          }
+        }
+      }
+    },
     "Не удалось создать файл" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -859,7 +1014,52 @@
         }
       }
     },
+    "Неверный API-ключ (401)" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid API key (401)"
+          }
+        }
+      }
+    },
+    "Некорректный URL" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid URL"
+          }
+        }
+      }
+    },
+    "Некорректный URL API. Проверьте настройки." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid API URL. Check settings."
+          }
+        }
+      }
+    },
+    "Некорректный ответ сервера." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid server response."
+          }
+        }
+      }
+    },
     "Нет бюджетов" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -870,6 +1070,7 @@
       }
     },
     "Нет операций" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -880,6 +1081,7 @@
       }
     },
     "Нет расходов" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -890,6 +1092,7 @@
       }
     },
     "Новая категория" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -910,6 +1113,7 @@
       }
     },
     "Новый доход" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -920,6 +1124,7 @@
       }
     },
     "Новый расход" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -940,6 +1145,7 @@
       }
     },
     "Общий доступ" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -961,6 +1167,7 @@
       }
     },
     "Открыть настройки" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -971,6 +1178,7 @@
       }
     },
     "Отмена" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -981,6 +1189,7 @@
       }
     },
     "Ошибка" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1001,6 +1210,7 @@
       }
     },
     "Подключение к бюджету..." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1042,6 +1252,7 @@
       }
     },
     "Показать все" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1052,6 +1263,7 @@
       }
     },
     "Покинуть" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1062,6 +1274,7 @@
       }
     },
     "Покинуть \"%@\"?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1072,6 +1285,7 @@
       }
     },
     "Покинуть бюджет" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1082,6 +1296,7 @@
       }
     },
     "Политика конфиденциальности" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1103,6 +1318,7 @@
       }
     },
     "Пригласить участника" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1133,6 +1349,7 @@
       }
     },
     "Пропустить" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1143,6 +1360,7 @@
       }
     },
     "Распознано" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1193,6 +1411,7 @@
       }
     },
     "Редактировать" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1203,6 +1422,7 @@
       }
     },
     "Редактировать бюджет" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1213,6 +1433,7 @@
       }
     },
     "Редактировать категорию" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1233,11 +1454,23 @@
       }
     },
     "Сегодня" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Today"
+          }
+        }
+      }
+    },
+    "Сервер вернул код %lld" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server returned code %lld"
           }
         }
       }
@@ -1253,6 +1486,7 @@
       }
     },
     "Скопировать" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1263,6 +1497,7 @@
       }
     },
     "Скрыть" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1283,6 +1518,7 @@
       }
     },
     "Создать" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1293,6 +1529,7 @@
       }
     },
     "Сохранить" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1303,6 +1540,7 @@
       }
     },
     "Способ оплаты" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1323,6 +1561,7 @@
       }
     },
     "Тема" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1373,6 +1612,7 @@
       }
     },
     "Уведомления отключены" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1383,6 +1623,7 @@
       }
     },
     "Удалить" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1393,6 +1634,7 @@
       }
     },
     "Удалить \"%@\"?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1403,6 +1645,7 @@
       }
     },
     "Удалить бюджет" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1413,6 +1656,7 @@
       }
     },
     "Удалить всё" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1423,6 +1667,7 @@
       }
     },
     "Удалить все операции" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1433,6 +1678,7 @@
       }
     },
     "Удалить все операции?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1443,6 +1689,7 @@
       }
     },
     "Управление категориями" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1453,6 +1700,7 @@
       }
     },
     "Управление участниками" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1463,6 +1711,7 @@
       }
     },
     "Цвет" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1494,6 +1743,7 @@
       }
     },
     "Экспортировать в CSV" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1524,6 +1774,7 @@
       }
     },
     "Язык" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

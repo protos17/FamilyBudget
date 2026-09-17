@@ -36,63 +36,100 @@ struct SettingsView: View {
                 Toggle("Включить", isOn: $viewModel.isAIEnabled)
 
                 if viewModel.isAIEnabled {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("API URL")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TextField("https://api.openai.com/v1", text: $viewModel.aiBaseURL)
-                            .textContentType(.URL)
-                            .autocapitalization(.none)
-                            .keyboardType(.URL)
+                    Picker("Движок ИИ", selection: $viewModel.aiEngine) {
+                        ForEach(AIRecognitionEngine.allCases) { engine in
+                            Text(engine.title).tag(engine)
+                        }
                     }
+                    .pickerStyle(.segmented)
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("API ключ")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        SecureField("sk-...", text: $viewModel.aiAPIKey)
-                            .textContentType(.password)
-                            .autocapitalization(.none)
-                    }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Модель")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    switch viewModel.aiEngine {
+                    case .appleIntelligence:
                         HStack(spacing: 8) {
-                            TextField("gpt-4o", text: $viewModel.aiModel)
-                                .autocapitalization(.none)
+                            if viewModel.isAppleIntelligenceAvailable {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                Text("Встроенный Apple Intelligence доступен")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Apple Intelligence недоступен на этом устройстве")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
 
-                            if !viewModel.availableModels.isEmpty {
-                                Menu {
-                                    ForEach(viewModel.availableModels, id: \.self) { model in
-                                        Button {
-                                            viewModel.aiModel = model
-                                        } label: {
-                                            if model == viewModel.aiModel {
-                                                Label(model, systemImage: "checkmark")
-                                            } else {
-                                                Text(model)
+                    case .openAI:
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("API URL")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("https://api.openai.com/v1", text: $viewModel.aiBaseURL)
+                                .textContentType(.URL)
+                                .autocapitalization(.none)
+                                .keyboardType(.URL)
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("API ключ")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            SecureField("sk-...", text: $viewModel.aiAPIKey)
+                                .textContentType(.password)
+                                .autocapitalization(.none)
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Модель")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            HStack(spacing: 8) {
+                                TextField("gpt-4o", text: $viewModel.aiModel)
+                                    .autocapitalization(.none)
+
+                                if !viewModel.availableModels.isEmpty {
+                                    Menu {
+                                        ForEach(viewModel.availableModels, id: \.self) { model in
+                                            Button {
+                                                viewModel.aiModel = model
+                                            } label: {
+                                                if model == viewModel.aiModel {
+                                                    Label(model, systemImage: "checkmark")
+                                                } else {
+                                                    Text(model)
+                                                }
                                             }
                                         }
+                                    } label: {
+                                        Image(systemName: "chevron.down.circle.fill")
+                                            .foregroundStyle(.secondary)
                                     }
-                                } label: {
-                                    Image(systemName: "chevron.down.circle.fill")
-                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
+
+                        connectionButton
+
+                        // Постоянный индикатор статуса подключения
+                        connectionHealthIndicator
                     }
-
-                    connectionButton
-
-                    // Постоянный индикатор статуса подключения
-                    connectionHealthIndicator
                 }
             } header: {
                 Text("ИИ-ассистент")
             } footer: {
-                Text("Подключите OpenAI-совместимый API для автоматического распознавания трат по фото. Проверьте подключение, чтобы выбрать модель из списка.")
+                if viewModel.isAIEnabled {
+                    switch viewModel.aiEngine {
+                    case .appleIntelligence:
+                        Text("Использует встроенную модель Apple Intelligence для локального распознавания чеков прямо на устройстве.")
+                    case .openAI:
+                        Text("Подключите OpenAI-совместимый API для автоматического распознавания трат по фото. Проверьте подключение, чтобы выбрать модель из списка.")
+                    }
+                } else {
+                    Text("Включите ИИ-ассистента для автоматического распознавания чеков.")
+                }
             }
 
             // MARK: - Уведомления
