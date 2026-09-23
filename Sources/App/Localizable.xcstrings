@@ -1560,6 +1560,16 @@
         }
       }
     },
+    "Текущий месяц" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current month"
+          }
+        }
+      }
+    },
     "Тема" : {
       "extractionState" : "stale",
       "localizations" : {

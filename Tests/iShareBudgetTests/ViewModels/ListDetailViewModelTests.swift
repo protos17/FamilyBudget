@@ -199,6 +199,16 @@ struct ListDetailViewModelTests {
         #expect(viewModel.showingCreateCategory == true)
     }
 
+    @Test("presentDatePicker opens the date picker sheet")
+    func presentDatePicker() {
+        let account = MockData.makeAccount()
+        let viewModel = ListDetailViewModel(list: account)
+
+        #expect(viewModel.showingDatePicker == false)
+        viewModel.presentDatePicker()
+        #expect(viewModel.showingDatePicker == true)
+    }
+
     // MARK: - Banner
 
     @Test("bannerText reflects ownership")

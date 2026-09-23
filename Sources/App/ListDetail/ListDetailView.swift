@@ -77,7 +77,9 @@ struct ListDetailView: View {
                     .listRowInsets(EdgeInsets())
             }
             
-            MonthNavigator(selectedMonth: $viewModel.selectedMonth)
+            MonthNavigator(selectedMonth: $viewModel.selectedMonth) {
+                viewModel.presentDatePicker()
+            }
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
             
@@ -193,6 +195,9 @@ struct ListDetailView: View {
             NavigationStack {
                 ShareInviteView(account: list, viewModel: viewModel)
             }
+        }
+        .sheet(isPresented: $viewModel.showingDatePicker) {
+            MonthDatePickerSheet(selectedMonth: $viewModel.selectedMonth)
         }
         .alert("Ошибка", isPresented: $viewModel.showingError) {
             Button("OK", role: .cancel) {}

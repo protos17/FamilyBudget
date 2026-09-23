@@ -36,6 +36,7 @@ final class ListDetailViewModel: ObservableObject {
     @Published var selectedMonth: Date = Calendar.current.startOfMonth(for: .now)
     @Published var selectedCategory: Category?
     @Published var selectedType: TransactionType?
+    @Published var showingDatePicker = false
     
     // Category creation
     @Published var showingCreateCategory = false
@@ -141,6 +142,10 @@ final class ListDetailViewModel: ObservableObject {
     func presentCreateCategory(kind: TransactionType) {
         categoryCreationKind = kind
         showingCreateCategory = true
+    }
+    
+    func presentDatePicker() {
+        showingDatePicker = true
     }
     
     func presentSharing() {
