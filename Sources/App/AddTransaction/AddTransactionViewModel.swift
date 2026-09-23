@@ -101,6 +101,9 @@ final class AddTransactionViewModel: ObservableObject {
             return false
         }
         
+        let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedNote = trimmedNote.isEmpty ? nil : trimmedNote
+
         if let existing = editingTransaction {
             existing.title = title.trimmingCharacters(in: .whitespaces)
             existing.amountMinorUnits = amountMinorUnits
@@ -108,7 +111,7 @@ final class AddTransactionViewModel: ObservableObject {
             existing.date = date
             existing.category = selectedCategory
             existing.paymentMethod = paymentMethod
-            existing.note = note.isEmpty ? nil : note
+            existing.note = resolvedNote
             existing.modifiedAt = .now
             onSaveEdit()
         } else {
@@ -117,11 +120,13 @@ final class AddTransactionViewModel: ObservableObject {
                 amountMinorUnits: amountMinorUnits,
                 type: type,
                 date: date,
+                note: resolvedNote,
+                paymentMethod: paymentMethod,
                 createdByUserID: identity.currentUserID
             )
             item.category = selectedCategory
             item.paymentMethod = paymentMethod
-            item.note = note.isEmpty ? nil : note
+            item.note = resolvedNote
             onSaveNew(item)
         }
         return true

@@ -9,6 +9,9 @@ import SwiftData
 import SwiftUI
 import CloudKit
 import Combine
+import OSLog
+
+private let logger = Logger(subsystem: "ru.protos.sharebudget", category: "ListDetailViewModel")
 
 @MainActor
 final class ListDetailViewModel: ObservableObject {
@@ -171,7 +174,11 @@ final class ListDetailViewModel: ObservableObject {
         
         if list.isShared {
             Task {
-                try? await sharing.pushItem(item, for: list)
+                do {
+                    try await sharing.pushItem(item, for: list)
+                } catch {
+                    logger.error("Failed to push new item '\(item.title)': \(error.localizedDescription)")
+                }
             }
         }
     }
@@ -182,7 +189,11 @@ final class ListDetailViewModel: ObservableObject {
 
         if list.isShared, let item = editingTransaction {
             Task {
-                try? await sharing.pushItem(item, for: list)
+                do {
+                    try await sharing.pushItem(item, for: list)
+                } catch {
+                    logger.error("Failed to push edited item '\(item.title)': \(error.localizedDescription)")
+                }
             }
         }
     }

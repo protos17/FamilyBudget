@@ -61,11 +61,11 @@ enum MockData {
             amountMinorUnits: minorUnits,
             type: type,
             date: date,
+            note: note,
+            paymentMethod: paymentMethod,
             createdByUserID: createdByUserID
         )
         transaction.category = category
-        transaction.paymentMethod = paymentMethod
-        transaction.note = note
         return transaction
     }
 

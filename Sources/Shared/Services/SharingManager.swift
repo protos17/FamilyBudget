@@ -403,6 +403,8 @@ final class SharingManager {
 
         if let note = item.note {
             record["note"] = note as CKRecordValue
+        } else {
+            record["note"] = nil
         }
 
         if !item.tags.isEmpty {
@@ -490,14 +492,30 @@ final class SharingManager {
 
         // Build set of remote item IDs and their records
         var remoteItems: [UUID: CKRecord] = [:]
+        var remoteKnownIDs = Set<UUID>()
         for (recordID, result) in matchResults {
+            let idFromRecordName: UUID? = {
+                let name = recordID.recordName
+                if name.hasPrefix("Item-") {
+                    return UUID(uuidString: String(name.dropFirst(5)))
+                }
+                return nil
+            }()
+
             switch result {
             case .success(let record):
                 if let idString = record["itemID"] as? String, let uuid = UUID(uuidString: idString) {
                     remoteItems[uuid] = record
+                    remoteKnownIDs.insert(uuid)
+                } else if let uuid = idFromRecordName {
+                    remoteItems[uuid] = record
+                    remoteKnownIDs.insert(uuid)
                 }
             case .failure(let error):
                 logger.error("Failed to fetch record \(recordID): \(error)")
+                if let uuid = idFromRecordName {
+                    remoteKnownIDs.insert(uuid)
+                }
             }
         }
 
@@ -548,12 +566,24 @@ final class SharingManager {
             item.modifiedAt = Date()
         }
 
+        // Update local items if remote record has newer data
+        for item in localItems {
+            if let record = remoteItems[item.id] {
+                if let remoteNote = record["note"] as? String, item.note != remoteNote {
+                    item.note = remoteNote
+                }
+            }
+        }
+
         // 2. Remove local items that were synced before, but no longer exist remotely.
         // This prevents resurrecting items intentionally deleted by another participant.
+        let now = Date()
         for item in localItems {
-            let missingRemotely = !remoteItems.keys.contains(item.id)
+            let missingRemotely = !remoteKnownIDs.contains(item.id)
             let wasPreviouslySynced = item.modifiedAt != nil
-            if missingRemotely && wasPreviouslySynced {
+            let isRecentlyModified = item.modifiedAt.map { now.timeIntervalSince($0) < 60 } ?? false
+            let isRecentlyCreated = now.timeIntervalSince(item.createdAt) < 60
+            if missingRemotely && wasPreviouslySynced && !isRecentlyModified && !isRecentlyCreated {
                 context.delete(item)
                 logger.debug("Removed item '\(item.title)' (deleted remotely)")
             }
@@ -563,7 +593,7 @@ final class SharingManager {
         // Items that are missing remotely but were previously synced are treated
         // as remote deletions and are not re-uploaded.
         let itemsToPush = localItems.filter {
-            !remoteItems.keys.contains($0.id) && $0.modifiedAt == nil
+            !remoteKnownIDs.contains($0.id) && $0.modifiedAt == nil
         }
         if !itemsToPush.isEmpty {
             let records = itemsToPush.map { makeItemRecord(for: $0, listID: list.id, zoneID: zoneID) }

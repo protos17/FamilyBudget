@@ -47,6 +47,8 @@ final class Transaction {
         amountMinorUnits: Int,
         type: TransactionType,
         date: Date = .now,
+        note: String? = nil,
+        paymentMethod: PaymentMethod = .other,
         createdByUserID: String? = nil
     ) {
         self.id = id
@@ -54,6 +56,8 @@ final class Transaction {
         self.amountMinorUnits = amountMinorUnits
         self.type = type
         self.date = date
+        self.note = note
+        self.paymentMethod = paymentMethod
         self.createdByUserID = createdByUserID
     }
 }

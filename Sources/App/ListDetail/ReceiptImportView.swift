@@ -159,11 +159,15 @@ struct ReceiptImportView: View {
     private func saveRecognizedTransaction(_ result: RecognizedTransactionData, into account: Account) {
         let amountMinorUnits = Int((result.amount * 100).rounded())
 
+        let paymentMethod: PaymentMethod = result.paymentMethod.flatMap(PaymentMethod.init) ?? .other
+
         let transaction = Transaction(
             title: result.title,
             amountMinorUnits: amountMinorUnits,
             type: .expense,
             date: result.parsedDate ?? .now,
+            note: result.note,
+            paymentMethod: paymentMethod,
             createdByUserID: UserIdentityService.shared.currentUserID
         )
 
@@ -173,11 +177,6 @@ struct ReceiptImportView: View {
             }
         }
 
-        if let pm = result.paymentMethod {
-            transaction.paymentMethod = PaymentMethod(rawValue: pm) ?? .other
-        }
-
-        transaction.note = result.note
         transaction.account = account
 
         modelContext.insert(transaction)
