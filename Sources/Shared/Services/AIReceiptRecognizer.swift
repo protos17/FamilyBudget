@@ -40,7 +40,10 @@ enum AIReceiptRecognizer {
 
     enum PromptTemplates {
         /// Unified system instructions in English for expense receipt and transaction recognition.
-        static func systemInstructions(availableCategories: [String]) -> String {
+        static func systemInstructions(
+            availableCategories: [String],
+            currentYear: Int = Calendar.current.component(.year, from: .now)
+        ) -> String {
             let categoryList = availableCategories.isEmpty ? "None" : availableCategories.joined(separator: ", ")
             return """
             You are an expert financial assistant specialized in recognizing expense transactions from photos of receipts, invoices, payment screens, or products/services.
@@ -53,16 +56,19 @@ enum AIReceiptRecognizer {
             - amount: Positive expense amount in standard currency units (e.g. 350.50, not cents).
             - categoryName: The most suitable category name selected ONLY from the available categories list above, or null if none fit.
             - paymentMethod: One of "card", "cash", "transfer", "other".
-            - date: OPTIONAL. Date of the transaction from the receipt in "dd-MM-yyyy" or "dd-MM-yyyy HH:mm" format. If the date is missing, blurry, unreadable, or not present on the receipt, leave date as null. A missing date is completely normal and acceptable. NEVER treat a missing date as an error or failure!
+            - date: OPTIONAL. Date of the transaction from the receipt in "dd-MM-yyyy" or "dd-MM-yyyy HH:mm" format. Always use the current year \(currentYear) for the year in the date. Even if the receipt indicates a different year, has a 2-digit year, or does not specify a year, the year in the date MUST always be \(currentYear). If the date is missing, blurry, unreadable, or not present on the receipt, leave date as null. A missing date is completely normal and acceptable. NEVER treat a missing date as an error or failure!
             - note: Additional details or null.
             - recognitionError: ONLY populate this field if the image does NOT contain any receipt, bill, or financial transaction at all, or if the amount and title are completely illegible. You MUST NEVER set recognitionError or fail recognition just because the date cannot be found or is unclear.
             """
         }
 
         /// OpenAI-specific system prompt extending system instructions with strict JSON format schema.
-        static func openAISystemPrompt(availableCategories: [String]) -> String {
+        static func openAISystemPrompt(
+            availableCategories: [String],
+            currentYear: Int = Calendar.current.component(.year, from: .now)
+        ) -> String {
             """
-            \(systemInstructions(availableCategories: availableCategories))
+            \(systemInstructions(availableCategories: availableCategories, currentYear: currentYear))
 
             Return STRICTLY a single valid JSON object without markdown formatting, without ```json wrappers, and without any explanatory text, matching the schema:
             {
@@ -76,13 +82,17 @@ enum AIReceiptRecognizer {
 
             CRITICAL INSTRUCTIONS:
             - The "date" field is strictly OPTIONAL. If the date is not found or not clearly visible, return "date": null.
+            - When returning a date, ALWAYS use the current year \(currentYear) as the year component (format: dd-MM-\(currentYear) or dd-MM-\(currentYear) HH:mm).
             - Do NOT return an error just because the date is missing.
             - Only return JSON: {"error": "reason description"} if the image contains NO financial transaction or purchase whatsoever.
             """
         }
 
         /// Shared user prompt for both Apple Intelligence and external OpenAI-compatible models.
-        static let userPrompt = "Recognize the expense transaction from this receipt image."
+        static var userPrompt: String {
+            let currentYear = Calendar.current.component(.year, from: .now)
+            return "Recognize the expense transaction from this receipt image. Always use the current year (\(currentYear)) for the date."
+        }
     }
 
     // MARK: - Recognition Entry Point
@@ -314,7 +324,7 @@ struct RecognizedTransactionData: Codable {
     @Guide(description: "Payment method", .anyOf(["card", "cash", "transfer", "other"]))
     let paymentMethod: String?
 
-    @Guide(description: "OPTIONAL date from the receipt in dd-MM-yyyy (or dd-MM-yyyy HH:mm). Return null if the date is missing, unreadable, or not clearly visible. A missing date is completely normal and NOT an error.")
+    @Guide(description: "OPTIONAL date from the receipt in dd-MM-yyyy (or dd-MM-yyyy HH:mm). Always use the current year for the year component. Return null if the date is missing, unreadable, or not clearly visible. A missing date is completely normal and NOT an error.")
     let date: String?
 
     @Guide(description: "Additional details about the transaction or null")
@@ -341,7 +351,7 @@ struct RecognizedTransactionData: Codable {
         self.recognitionError = recognitionError
     }
 
-    /// Парсит `date` в `Date`, пробуя несколько форматов и отсекая некорректные даты.
+    /// Парсит `date` в `Date`, пробуя несколько форматов, приводя год к текущему и отсекая некорректные даты.
     var parsedDate: Date? {
         guard let date, !date.isEmpty else { return nil }
 
@@ -359,17 +369,29 @@ struct RecognizedTransactionData: Codable {
             "yyyy-MM-dd",
             "yyyy-MM-dd HH:mm:ss",
             "dd/MM/yyyy",
-            "dd/MM/yyyy HH:mm"
+            "dd/MM/yyyy HH:mm",
+            "dd-MM-yy",
+            "dd-MM-yy HH:mm",
+            "dd.MM.yy",
+            "dd.MM.yy HH:mm",
+            "dd/MM/yy",
+            "dd/MM/yy HH:mm",
+            "dd-MM",
+            "dd.MM",
+            "dd/MM"
         ]
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = .current
 
+        let currentYear = Calendar.current.component(.year, from: .now)
+
         for format in formatsToTry {
             formatter.dateFormat = format
             if let parsed = formatter.date(from: trimmed) {
-                let yearsDiff = abs(Calendar.current.dateComponents([.year], from: parsed, to: .now).year ?? 0)
-                return yearsDiff > 100 ? nil : parsed
+                var components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: parsed)
+                components.year = currentYear
+                return Calendar.current.date(from: components) ?? parsed
             }
         }
         return nil
