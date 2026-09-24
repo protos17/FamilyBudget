@@ -401,11 +401,7 @@ final class SharingManager {
         record["date"] = item.date as CKRecordValue
         record["paymentMethod"] = item.paymentMethod.rawValue as CKRecordValue
 
-        if let note = item.note {
-            record["note"] = note as CKRecordValue
-        } else {
-            record["note"] = nil
-        }
+        // Note is kept local-only and not synced to CloudKit
 
         if !item.tags.isEmpty {
             record["tags"] = item.tags as CKRecordValue
@@ -536,7 +532,7 @@ final class SharingManager {
             )
 
             item.createdByDisplayName = record["createdByDisplayName"] as? String
-            item.note = record["note"] as? String
+            // Note is local-only and not synced via CloudKit
             item.tags = (record["tags"] as? [String]) ?? []
 
             if let paymentRaw = record["paymentMethod"] as? String {
@@ -566,14 +562,7 @@ final class SharingManager {
             item.modifiedAt = Date()
         }
 
-        // Update local items if remote record has newer data
-        for item in localItems {
-            if let record = remoteItems[item.id] {
-                if let remoteNote = record["note"] as? String, item.note != remoteNote {
-                    item.note = remoteNote
-                }
-            }
-        }
+
 
         // 2. Remove local items that were synced before, but no longer exist remotely.
         // This prevents resurrecting items intentionally deleted by another participant.
